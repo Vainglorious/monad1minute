@@ -27,13 +27,21 @@ export default function LiveMarketChart({ asset = "btc", height = 200 }: Props) 
     chartRef.current?.pushTick(timeSec, value);
   }, []);
 
-  const { history, livePrice } = useLivePriceFeed(asset, handleLiveTick);
+  const { history, livePrice, dir } = useLivePriceFeed(asset, handleLiveTick);
 
   return (
     <div className="card chart-card">
       <div className="chart-head">
-        <div className="label-xs">{asset.toUpperCase()}/USD · live</div>
-        <div className="chart-price">{livePrice != null ? fmtUsd(livePrice) : "—"}</div>
+        <div className="label-xs">
+          <span className="chart-live-dot" />
+          {asset.toUpperCase()}/USD · LIVE
+        </div>
+        <div className={`chart-price ${dir}`} key={livePrice ?? "na"}>
+          {livePrice != null ? fmtUsd(livePrice) : "—"}
+          {livePrice != null && dir !== "flat" && (
+            <span className="chart-price-arrow">{dir === "up" ? "▲" : "▼"}</span>
+          )}
+        </div>
       </div>
       <LiveChartV2
         ref={chartRef}

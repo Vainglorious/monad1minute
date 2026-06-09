@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { interpolateSeriesData } from "@/lib/interpolateSeriesData";
 
-// Continuous BTC/USD feed for the live market chart, adapted from the source
-// project's useAssetPriceFeed:
-//   1. Seed the history line from our Binance-klines BFF (last ~1h).
-//   2. Stream live ticks over Binance's @trade WebSocket (browser-direct).
-// Binance global geoblocks the US browser, so default to Binance.US; override
-// with NEXT_PUBLIC_BINANCE_WS if you run elsewhere.
-const WS_HOST = process.env.NEXT_PUBLIC_BINANCE_WS ?? "wss://stream.binance.us:9443";
+// Continuous BTC/USD feed for the live market chart.
+//   1. Seed the history line from our Coinbase-candles BFF (last ~1h).
+//   2. Stream live ticks over Coinbase's `ticker` WebSocket (browser-direct).
+// Coinbase BTC-USD matches the operator's settlement price (PRICE_SOURCE=coinbase),
+// so the chart and round settlement agree. Override the WS host with
+// NEXT_PUBLIC_COINBASE_WS if needed.
+const WS_HOST = process.env.NEXT_PUBLIC_COINBASE_WS ?? "wss://ws-feed.exchange.coinbase.com";
 const SEED_MINUTES = 60;
 
 export function useLivePriceFeed(
@@ -18,6 +18,8 @@ export function useLivePriceFeed(
 ) {
   const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
   const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [dir, setDir] = useState<"up" | "down" | "flat">("flat");
+  const prevPriceRef = useRef<number | null>(null);
 
   const onLiveTickRef = useRef(onLiveTick);
   useEffect(() => {
@@ -25,7 +27,7 @@ export function useLivePriceFeed(
   }, [onLiveTick]);
 
   const assetUpper = asset.toUpperCase();
-  const binanceSymbol = `${assetUpper.toLowerCase()}usdt`;
+  const product = `${assetUpper}-USD`;
 
   // ── history seed ──────────────────────────────────────────────────
   useEffect(() => {
@@ -52,7 +54,7 @@ export function useLivePriceFeed(
     };
   }, [assetUpper]);
 
-  // ── live ticks via Binance @trade WS ──────────────────────────────
+  // ── live ticks via Coinbase `ticker` WS ───────────────────────────
   useEffect(() => {
     let ws: WebSocket | null = null;
     let cancelled = false;
@@ -63,9 +65,15 @@ export function useLivePriceFeed(
       if (!Number.isFinite(val) || !Number.isFinite(tMs)) return;
       // Fast path: straight into the chart, no React re-render.
       onLiveTickRef.current?.(Math.floor(tMs / 1000), val);
-      // Slow path: throttle the header price to ~5 Hz.
+      // Slow path: throttle the header price to ~5 Hz, with up/down direction.
       if (tMs - lastStateMs >= 200) {
         lastStateMs = tMs;
+        const prev = prevPriceRef.current;
+        if (prev != null) {
+          if (val > prev) setDir("up");
+          else if (val < prev) setDir("down");
+        }
+        prevPriceRef.current = val;
         setLivePrice(val);
       }
     };
@@ -77,12 +85,25 @@ export function useLivePriceFeed(
       } catch {
         /* ignore */
       }
-      ws = new WebSocket(`${WS_HOST}/ws/${binanceSymbol}@trade`);
+      ws = new WebSocket(WS_HOST);
+      ws.onopen = () => {
+        // Coinbase requires an explicit subscribe before any ticks flow.
+        ws?.send(
+          JSON.stringify({
+            type: "subscribe",
+            product_ids: [product],
+            channels: ["ticker"],
+          }),
+        );
+      };
       ws.onmessage = (ev) => {
         if (document.visibilityState === "hidden") return;
         try {
           const msg = JSON.parse(ev.data);
-          handleTrade(parseFloat(msg.p), Number(msg.T) || Date.now());
+          // { type: 'ticker', price: '...', time: '2026-...Z' }
+          if (msg.type === "ticker" && msg.price) {
+            handleTrade(parseFloat(msg.price), msg.time ? Date.parse(msg.time) : Date.now());
+          }
         } catch {
           /* skip malformed frame */
         }
@@ -121,7 +142,7 @@ export function useLivePriceFeed(
         /* ignore */
       }
     };
-  }, [binanceSymbol]);
+  }, [product]);
 
-  return { history, livePrice };
+  return { history, livePrice, dir };
 }
