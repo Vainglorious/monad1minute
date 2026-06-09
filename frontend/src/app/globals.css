@@ -1,14 +1,16 @@
 :root {
-  --bg: #0b0b12;
-  --bg-elev: #14141f;
-  --border: #262636;
-  --text: #f4f4f8;
-  --muted: #9a9ab0;
-  --accent: #836ef9; /* Monad purple */
-  --accent-2: #a78bfa;
-  --up: #2ad17f;
-  --down: #ff5d6c;
-  --danger: #ff5d6c;
+  /* Polymarket Analytics theme — same tokens as the main analytics app
+     (off-black page, slate cards, Inter, flat Poly Blue actions). */
+  --bg: #191919; /* off-black */
+  --bg-elev: #1e293b; /* card slate */
+  --border: #29374e; /* subtle border */
+  --text: #e8eaed; /* c-text-primary */
+  --muted: #7b8ca8; /* c-text-muted */
+  --accent: #2e5cff; /* Poly Blue */
+  --accent-2: #6e8dff;
+  --up: #53b97c; /* data-good */
+  --down: #e55a47; /* data-bad */
+  --danger: #e55a47;
 }
 
 * {
@@ -22,7 +24,7 @@ body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,12 +51,10 @@ body {
   font-size: 18px;
 }
 
-.brand-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 16px var(--accent);
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .center-fill {
@@ -79,10 +79,8 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  /* solid Poly Blue (monochrome brand treatment, no gradients) */
+  color: var(--accent-2);
 }
 
 .field {
@@ -116,14 +114,19 @@ body {
 .btn {
   width: 100%;
   border: none;
-  border-radius: 14px;
-  padding: 17px;
-  font-size: 17px;
-  font-weight: 700;
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
   color: #fff;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  /* flat Poly Blue — no gradients, same as the analytics app */
+  background: var(--accent);
   cursor: pointer;
-  transition: transform 0.05s ease, opacity 0.15s ease;
+  transition: transform 0.05s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.btn:not(:disabled):hover {
+  background: #3f6aff;
 }
 
 .btn:active {
@@ -151,7 +154,7 @@ body {
 .card {
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 12px;
   padding: 20px;
 }
 
@@ -259,9 +262,9 @@ body {
   max-width: 90vw;
   padding: 14px 18px;
   border-radius: 14px;
-  background: linear-gradient(90deg, rgba(42, 209, 127, 0.16), rgba(131, 110, 249, 0.16)),
+  background: linear-gradient(90deg, rgba(83, 185, 124, 0.16), rgba(46, 92, 255, 0.16)),
     var(--bg-elev);
-  border: 1px solid rgba(42, 209, 127, 0.5);
+  border: 1px solid rgba(83, 185, 124, 0.5);
   color: var(--text);
   font-size: 15px;
   font-weight: 600;
@@ -358,7 +361,7 @@ body {
 
 .phase.open {
   color: var(--up);
-  border-color: rgba(42, 209, 127, 0.4);
+  border-color: rgba(83, 185, 124, 0.4);
 }
 
 .phase.locked {
@@ -447,17 +450,17 @@ body {
 }
 
 .rail-bucket.up {
-  background: rgba(42, 209, 127, 0.06);
-  border-color: rgba(42, 209, 127, 0.22);
+  background: rgba(83, 185, 124, 0.08);
+  border-color: rgba(83, 185, 124, 0.28);
 }
 
 .rail-bucket.dn {
-  background: rgba(255, 93, 108, 0.06);
-  border-color: rgba(255, 93, 108, 0.22);
+  background: rgba(229, 90, 71, 0.08);
+  border-color: rgba(229, 90, 71, 0.28);
 }
 
 .rail-bucket.extreme {
-  box-shadow: inset 0 0 0 1px rgba(131, 110, 249, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(46, 92, 255, 0.35);
 }
 
 .rail-bucket:active:not(:disabled) {
@@ -484,7 +487,7 @@ body {
 
 .rail-bucket.winner {
   border-color: var(--up);
-  box-shadow: 0 0 0 2px var(--up) inset, 0 0 14px rgba(42, 209, 127, 0.4);
+  box-shadow: 0 0 0 2px var(--up) inset, 0 0 14px rgba(83, 185, 124, 0.4);
   opacity: 1;
 }
 
@@ -533,8 +536,8 @@ body {
   letter-spacing: 0.04em;
   color: var(--accent-2);
   padding: 2px 0;
-  border-top: 1px dashed rgba(131, 110, 249, 0.45);
-  border-bottom: 1px dashed rgba(131, 110, 249, 0.45);
+  border-top: 1px dashed rgba(46, 92, 255, 0.45);
+  border-bottom: 1px dashed rgba(46, 92, 255, 0.45);
 }
 
 .bet-status {

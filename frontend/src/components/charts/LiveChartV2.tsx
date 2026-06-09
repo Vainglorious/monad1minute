@@ -59,12 +59,13 @@ const EASE_DURATION_MS = 500;
 const RIGHT_OFFSET_BARS = 175;
 const VISIBLE_BARS = VISIBLE_WINDOW_SEC * (1000 / FILLER_INTERVAL_MS) + RIGHT_OFFSET_BARS;
 
-// Fixed dark palette (this app is dark-only).
+// Fixed dark palette — Polymarket Analytics tokens (chart sits on the
+// #1e293b card slate, so grid/border use the lighter subtle-border tone).
 const PALETTE = {
-  text: "#9a9ab0",
-  grid: "#1E293B",
-  border: "#262636",
-  crosshair: "#29374E",
+  text: "#7b8ca8",
+  grid: "#29374e",
+  border: "#29374e",
+  crosshair: "#344563",
 };
 
 const easeInOutCubic = (t: number): number =>

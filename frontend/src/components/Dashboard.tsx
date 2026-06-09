@@ -101,7 +101,12 @@ export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props)
     <div className="screen">
       <div className="bar">
         <div className="brand">
-          <span className="brand-dot" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/polymarketanalyticstopmodal.png"
+            alt="Polymarket Analytics"
+            className="brand-logo"
+          />
           1 Minute
         </div>
         <div className="bar-right">
