@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { formatEther } from "viem";
 import QRCode from "qrcode";
 import History from "@/components/History";
 import Leaderboard from "@/components/Leaderboard";
@@ -34,6 +35,50 @@ export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props)
       .then(setQr)
       .catch(() => setQr(""));
   }, [user.address]);
+
+  // Catch-up sweep: claim past wins that were never claimed (e.g. the tab was
+  // closed before the round resolved). The current round's win is auto-claimed
+  // by MarketGame; a duplicate here just gets a harmless 409.
+  const sweptRef = useRef(false);
+  useEffect(() => {
+    if (sweptRef.current) return;
+    sweptRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/history", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        const unclaimed: { roundId: string }[] = (json.bets ?? []).filter(
+          (b: { won: boolean | null; claimed: boolean }) => b.won && !b.claimed,
+        );
+        let claimedCount = 0;
+        let totalWei = 0n;
+        for (const b of unclaimed) {
+          const r = await fetch("/api/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roundId: b.roundId }),
+          });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) {
+            claimedCount++;
+            totalWei += BigInt(j.payout ?? 0);
+          }
+        }
+        if (claimedCount > 0) {
+          const mon = Number(formatEther(totalWei)).toFixed(2);
+          onToast(
+            `Claimed ${mon} MON from ${claimedCount} past win${claimedCount === 1 ? "" : "s"} 🏆`,
+          );
+          setVersion((v) => v + 1);
+          onRefresh();
+        }
+      } catch {
+        /* best-effort; wins stay claimable on-chain */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function copy() {
     try {
