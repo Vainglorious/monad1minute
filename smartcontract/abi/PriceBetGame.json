@@ -16,6 +16,19 @@
   },
   {
     "type": "function",
+    "name": "MULTIPLIER_SCALE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "betAmount",
     "inputs": [],
     "outputs": [
@@ -100,6 +113,25 @@
   },
   {
     "type": "function",
+    "name": "bucketMultiplier",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "claim",
     "inputs": [
       {
@@ -145,19 +177,6 @@
   },
   {
     "type": "function",
-    "name": "extremeMultiplier",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "freeBalance",
     "inputs": [],
     "outputs": [
@@ -175,6 +194,19 @@
     "inputs": [],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "getBucketMultipliers",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[6]",
+        "internalType": "uint256[6]"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -197,7 +229,7 @@
   },
   {
     "type": "function",
-    "name": "middleMultiplier",
+    "name": "maxMultiplier",
     "inputs": [],
     "outputs": [
       {
@@ -350,17 +382,12 @@
   },
   {
     "type": "function",
-    "name": "setMultipliers",
+    "name": "setBucketMultipliers",
     "inputs": [
       {
-        "name": "_extreme",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_middle",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "m",
+        "type": "uint256[6]",
+        "internalType": "uint256[6]"
       }
     ],
     "outputs": [],
@@ -485,18 +512,6 @@
         "internalType": "uint256"
       },
       {
-        "name": "extremeMultiplier",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "middleMultiplier",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
         "name": "bettingDuration",
         "type": "uint64",
         "indexed": false,
@@ -520,6 +535,19 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MultipliersChanged",
+    "inputs": [
+      {
+        "name": "bucketMultiplier",
+        "type": "uint256[6]",
+        "indexed": false,
+        "internalType": "uint256[6]"
       }
     ],
     "anonymous": false

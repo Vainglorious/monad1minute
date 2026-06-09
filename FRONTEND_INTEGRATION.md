@@ -15,7 +15,7 @@ Everything the FE needs to integrate the BTC 1-minute price-bucket betting game.
 | RPC URL | `https://rpc.monad.xyz` |
 | Chain ID | `143` (`0x8f`) |
 | Native currency | **MON** (18 decimals) |
-| Contract address | `0x0f6Cce5f0A07aA77e6E36E407a72e83A4503C383` |
+| Contract address | `0x7639Cc0fD49E8D574a75c71874C7a37665F751c0` |
 
 > ⚠️ This is the same contract used for the live test. If you redeploy for production, swap the address.
 
@@ -28,7 +28,7 @@ export const monad = defineChain({
   nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
   rpcUrls: { default: { http: ['https://rpc.monad.xyz'] } },
 })
-export const PRICE_BET_GAME = '0x0f6Cce5f0A07aA77e6E36E407a72e83A4503C383'
+export const PRICE_BET_GAME = '0x7639Cc0fD49E8D574a75c71874C7a37665F751c0'
 ```
 
 ---
@@ -47,12 +47,16 @@ Price change is a **signed integer in basis points (bps)**: `0.1% = 10 bps`, `0.
 
 | Enum value | Name | Condition (bps) | Meaning | Tier | Payout |
 |---|---|---|---|---|---|
-| `0` | A | `bps > 10`        | up > +0.1%        | extreme | 5× |
-| `1` | B | `5 < bps <= 10`   | +0.05% to +0.1% up| middle  | 2× |
-| `2` | C | `0 <= bps <= 5`   | 0% to +0.05% up   | middle  | 2× |
-| `3` | D | `-5 <= bps < 0`   | -0.05% to 0% down | middle  | 2× |
-| `4` | E | `-10 <= bps < -5` | -0.1% to -0.05% dn| middle  | 2× |
-| `5` | F | `bps < -10`       | down > 0.1%       | extreme | 5× |
+| `0` | A | `bps > 10`        | up > +0.1%        | extreme | **20×** |
+| `1` | B | `5 < bps <= 10`   | +0.05% to +0.1% up| mid     | 10× |
+| `2` | C | `0 <= bps <= 5`   | 0% to +0.05% up   | near-0  | 2.8× |
+| `3` | D | `-5 <= bps < 0`   | -0.05% to 0% down | near-0  | 2.8× |
+| `4` | E | `-10 <= bps < -5` | -0.1% to -0.05% dn| mid     | 10× |
+| `5` | F | `bps < -10`       | down > 0.1%       | extreme | **20×** |
+
+> Payouts are **per-bucket** and live-tunable by the owner via `setBucketMultipliers`. On-chain they
+> are stored scaled by 100 (`bucketMultiplier(i)` returns e.g. `280` = 2.8×, `2000` = 20×). Always
+> read them from the contract (`getBucketMultipliers()`) rather than hardcoding — they can change.
 
 `placeBet` takes the enum value (`uint8` `0..5`). Exactly `0%` → bucket **C**.
 
@@ -79,7 +83,8 @@ export const BUCKETS = [
 | `rounds(uint256) → (uint64 startTime, uint64 lockTime, bool resolved, uint8 winner, uint256 betCount, uint256 winnerCount, uint256 payoutPerWinner)` | round struct | round state, countdown, result |
 | `bets(uint256 roundId, address player) → (uint8 bucket, bool placed, bool claimed)` | this user's bet | has the user bet? claimed? |
 | `betAmount() → uint256` | stake in wei | **read dynamically — don't hardcode** (10 MON prod, 1 MON on test) |
-| `extremeMultiplier() / middleMultiplier() → uint256` | odds | show potential payout |
+| `getBucketMultipliers() → uint256[6]` | all six payout odds (×100; 280 = 2.8×) | show potential payout per bucket |
+| `bucketMultiplier(uint8) → uint256` | one bucket's payout (×100) | single-bucket odds |
 | `bettingDuration() → uint64` | window seconds | countdown length |
 | `reserved() / freeBalance() → uint256` | house accounting | optional admin UI |
 | `owner() / operator() → address` | roles | gate admin/operator UI |
@@ -171,11 +176,11 @@ ethers v6 is equivalent: `new ethers.Contract(PRICE_BET_GAME, abi, signerOrProvi
 ### Payout preview helper
 
 ```ts
-function potentialPayout(bucketId: number, stakeWei: bigint, extreme: bigint, middle: bigint) {
-  const isExtreme = bucketId === 0 || bucketId === 5
-  return stakeWei * (isExtreme ? extreme : middle) // total returned, includes stake
+// multipliers = await getBucketMultipliers() → bigint[6], scaled by 100 (e.g. 280n = 2.8×)
+function potentialPayout(bucketId: number, stakeWei: bigint, multipliers: bigint[]) {
+  return stakeWei * multipliers[bucketId] / 100n // total returned, includes stake
 }
-// e.g. 1 MON on bucket A → 5 MON; 1 MON on bucket C → 2 MON
+// with [2000,1000,280,280,1000,2000]: 1 MON on A → 20 MON; on B → 10 MON; on C → 2.8 MON
 ```
 
 ---

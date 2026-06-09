@@ -47,6 +47,35 @@ Reads from the **project root `.env`** (loaded with Node's `--env-file`):
 
 ## Run
 
+### ⭐ Operating cheat-sheet (turn on / watch / turn off)
+
+```sh
+cd operator-bot
+./operator.sh start     # turn ON  (uses PRICE_SOURCE from ../.env — no prefix needed)
+./operator.sh status    # is it running? + last few log lines
+./operator.sh logs      # WATCH live rounds
+./operator.sh stop      # turn OFF for real
+./operator.sh restart   # stop + start
+```
+
+> 🔑 **The #1 gotcha:** `./operator.sh logs` only *watches* the log. Pressing **Ctrl-C there exits
+> the viewer, NOT the bot** — the operator keeps running in the background. To actually stop it you
+> must run **`./operator.sh stop`**. Use `./operator.sh status` to confirm whether it's really running.
+
+**Practice the full cycle:**
+
+```sh
+./operator.sh status          # → STATUS: RUNNING / STOPPED
+./operator.sh logs            # watch a few rounds, then Ctrl-C to stop watching (bot stays up)
+./operator.sh stop            # fully stop it
+./operator.sh start           # start again — it auto-resolves any open round first
+```
+
+Starting while it's already up prints `operator already running` (the safety guard). Run only **one**
+operator at a time. See `sim-bettor.sh` to place test bets so the log shows winners/payouts.
+
+---
+
 ### Foreground (simplest — runs until you Ctrl-C)
 
 ```sh

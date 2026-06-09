@@ -45,6 +45,8 @@ const ABI = [
   { type: 'function', name: 'resolveRound', stateMutability: 'nonpayable', inputs: [{ name: 'priceChangeBps', type: 'int256' }], outputs: [] },
   { type: 'function', name: 'currentRoundId', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { type: 'function', name: 'bettingDuration', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint64' }] },
+  { type: 'function', name: 'betAmount', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { type: 'function', name: 'bucketCount', stateMutability: 'view', inputs: [{ type: 'uint256' }, { type: 'uint8' }], outputs: [{ type: 'uint256' }] },
   {
     type: 'function', name: 'rounds', stateMutability: 'view', inputs: [{ type: 'uint256' }],
     outputs: [
@@ -122,6 +124,8 @@ async function runForever() {
   console.log('  seed px  :', seeded != null ? `$${fmt(seeded)}` : 'n/a (will retry live)')
 
   const duration = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'bettingDuration' })
+  const betAmount = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'betAmount' })
+  console.log('  stake    :', formatEther(betAmount), 'MON/bet')
   console.log('  window   :', Number(duration), 's (cycle ≈', Number(duration) + LOCK_BUFFER_S, 's )\n')
 
   await resolveOpenRoundIfAny()
@@ -151,6 +155,19 @@ async function runForever() {
         `→ bucket ${BUCKETS[r.winner]} | ${r.betCount} bet(s), ${r.winnerCount} winner(s)` +
         (r.winnerCount > 0n ? `, payout ${formatEther(r.payoutPerWinner)} MON each` : '')
       )
+
+      // per-bucket breakdown of bets collected
+      if (r.betCount > 0n) {
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F']
+        const counts = await Promise.all(
+          labels.map((_, b) => pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'bucketCount', args: [id, b] }))
+        )
+        const breakdown = labels.map((l, i) => `${l}:${counts[i]}`).join(' ')
+        const pool = formatEther(r.betCount * betAmount)
+        const winners = counts[r.winner]
+        const paidOut = formatEther(winners * r.payoutPerWinner)
+        console.log(`    bets collected → ${breakdown}  (${r.betCount} total, pool ${pool} MON) | paid out ${paidOut} MON`)
+      }
     } catch (err) {
       console.error('⚠ cycle error:', err.shortMessage || err.message)
       await sleep(5000) // back off, then retry the loop

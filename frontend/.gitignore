@@ -4,6 +4,8 @@ out
 .env
 .env.local
 .env*.local
+.env*.bak
+*.bak
 *.log
 .DS_Store
 .vercel

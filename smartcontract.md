@@ -22,21 +22,22 @@ non-overlapping; exactly `0%` falls in bucket **C**.
 
 | Bucket | Condition (signed bps) | Meaning            | Tier    | Payout |
 |--------|------------------------|--------------------|---------|--------|
-| A      | `bps > 10`             | up more than +0.1% | extreme | **5x** |
-| B      | `5 < bps <= 10`        | +0.05% to +0.1% up | middle  | 2x     |
-| C      | `0 <= bps <= 5`        | 0% to +0.05% up    | middle  | 2x     |
-| D      | `-5 <= bps < 0`        | -0.05% to 0% down  | middle  | 2x     |
-| E      | `-10 <= bps < -5`      | -0.1% to -0.05% dn | middle  | 2x     |
-| F      | `bps < -10`            | down more than 0.1%| extreme | **5x** |
+| A      | `bps > 10`             | up more than +0.1% | extreme | **20x** |
+| B      | `5 < bps <= 10`        | +0.05% to +0.1% up | mid     | 10x    |
+| C      | `0 <= bps <= 5`        | 0% to +0.05% up    | near-0  | 2.8x   |
+| D      | `-5 <= bps < 0`        | -0.05% to 0% down  | near-0  | 2.8x   |
+| E      | `-10 <= bps < -5`      | -0.1% to -0.05% dn | mid     | 10x    |
+| F      | `bps < -10`            | down more than 0.1%| extreme | **20x** |
 
-Payout is the **total returned** per 10 MON stake: extreme win → 50 MON, middle win → 20 MON,
+Payouts are **per-bucket** (owner-tunable via `setBucketMultipliers`, stored ×100 on-chain). Payout is
+the **total returned** per stake: e.g. on a 10 MON stake, A/F win → 200 MON, B/E → 100 MON, C/D → 28 MON,
 loss → 0. All multipliers, the bet amount, and the window are **owner-adjustable on-chain**.
 
 ## Economics & safety
 
 - **Fixed-odds, house-funded.** The contract holds a bankroll. The owner funds it via `fundHouse()`
   (or a plain transfer) and may withdraw only *free* (unreserved) funds.
-- **Solvency is structural.** Each bet reserves its worst-case payout (`10 * extremeMultiplier`).
+- **Solvency is structural.** Each bet reserves its worst-case payout (`betAmount * maxMultiplier / 100`).
   Betting reverts unless the contract balance covers all reservations, so the house can never owe
   more than it holds. On resolve, the over-reservation is released and only real winner liability
   is re-held for claims.

@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 /// @title PriceBetGame
 /// @notice Fixed-odds betting on short-window BTC/USD price movement, settled by a trusted operator.
-///         Players stake a flat amount on one of six outcome buckets per round. The two extreme
-///         buckets pay more than the four middle buckets. House-funded with structural solvency.
+///         Players stake a flat amount on one of six outcome buckets per round; each bucket has its
+///         own owner-configurable payout multiplier. House-funded with structural solvency.
 /// @dev Self-contained: inline ownership + reentrancy guard, no external dependencies.
 contract PriceBetGame {
     // ----------------------------------------------------------------------------------
@@ -51,9 +51,14 @@ contract PriceBetGame {
     address public operator;
 
     uint256 public betAmount = 10 ether; // flat stake per bet (10 MON)
-    uint256 public extremeMultiplier = 5; // total return multiplier for extreme buckets (A, F)
-    uint256 public middleMultiplier = 2; // total return multiplier for middle buckets (B, C, D, E)
     uint64 public bettingDuration = 60; // seconds the betting window stays open
+
+    /// @notice Per-bucket total-return payout multipliers, scaled by MULTIPLIER_SCALE (100 = 1x).
+    ///         Index is the Bucket enum [A, B, C, D, E, F]; e.g. 280 => 2.8x, 2000 => 20x.
+    uint256 public constant MULTIPLIER_SCALE = 100;
+    uint256[6] public bucketMultiplier = [uint256(2000), 1000, 280, 280, 1000, 2000];
+    /// @notice max(bucketMultiplier), cached for the worst-case solvency reservation.
+    uint256 public maxMultiplier = 2000;
 
     uint256 public currentRoundId; // 0 means "no round started yet"
     bool private roundActive; // a round exists and is not yet resolved
@@ -83,7 +88,8 @@ contract PriceBetGame {
     event Withdrawn(address indexed to, uint256 amount);
     event OperatorChanged(address indexed operator);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event ConfigChanged(uint256 betAmount, uint256 extremeMultiplier, uint256 middleMultiplier, uint64 bettingDuration);
+    event ConfigChanged(uint256 betAmount, uint64 bettingDuration);
+    event MultipliersChanged(uint256[6] bucketMultiplier);
 
     // ----------------------------------------------------------------------------------
     // Modifiers
@@ -155,9 +161,9 @@ contract PriceBetGame {
         r.betCount += 1;
         bucketCount[roundId][uint8(bucket)] += 1;
 
-        // Reserve worst-case payout (extreme) for this bet. The incoming stake is already part of
-        // the balance, so the house bankroll must cover the remainder or this reverts.
-        reserved += betAmount * extremeMultiplier;
+        // Reserve worst-case payout (the highest-paying bucket) for this bet. The incoming stake is
+        // already part of the balance, so the house bankroll must cover the remainder or this reverts.
+        reserved += betAmount * maxMultiplier / MULTIPLIER_SCALE;
         require(address(this).balance >= reserved, "house underfunded");
 
         emit BetPlaced(roundId, msg.sender, bucket, msg.value);
@@ -174,11 +180,10 @@ contract PriceBetGame {
 
         Bucket winner = classify(priceChangeBps);
         uint256 winnerCount = bucketCount[roundId][uint8(winner)];
-        uint256 multiplier = isExtreme(winner) ? extremeMultiplier : middleMultiplier;
-        uint256 payoutPerWinner = betAmount * multiplier;
+        uint256 payoutPerWinner = betAmount * bucketMultiplier[uint8(winner)] / MULTIPLIER_SCALE;
 
         // Release this round's worst-case reservation, then re-reserve actual winner liability.
-        uint256 worstCase = r.betCount * betAmount * extremeMultiplier;
+        uint256 worstCase = r.betCount * betAmount * maxMultiplier / MULTIPLIER_SCALE;
         reserved = reserved - worstCase + (winnerCount * payoutPerWinner);
 
         r.resolved = true;
@@ -255,6 +260,11 @@ contract PriceBetGame {
         return address(this).balance - reserved;
     }
 
+    /// @notice All six per-bucket multipliers at once (scaled by 100; 280 = 2.8x).
+    function getBucketMultipliers() external view returns (uint256[6] memory) {
+        return bucketMultiplier;
+    }
+
     // ----------------------------------------------------------------------------------
     // Admin / config (only while no round is live)
     // ----------------------------------------------------------------------------------
@@ -275,21 +285,27 @@ contract PriceBetGame {
         require(!roundActive, "round active");
         require(_betAmount > 0, "zero bet");
         betAmount = _betAmount;
-        emit ConfigChanged(betAmount, extremeMultiplier, middleMultiplier, bettingDuration);
+        emit ConfigChanged(betAmount, bettingDuration);
     }
 
-    function setMultipliers(uint256 _extreme, uint256 _middle) external onlyOwner {
+    /// @notice Set the six per-bucket payout multipliers (scaled by 100; 280 = 2.8x). Each must be
+    ///         >= 1x (100) so a winner never receives less than their stake.
+    function setBucketMultipliers(uint256[6] calldata m) external onlyOwner {
         require(!roundActive, "round active");
-        require(_extreme >= 1 && _middle >= 1, "multiplier < 1");
-        extremeMultiplier = _extreme;
-        middleMultiplier = _middle;
-        emit ConfigChanged(betAmount, extremeMultiplier, middleMultiplier, bettingDuration);
+        uint256 mx = 0;
+        for (uint256 i = 0; i < 6; i++) {
+            require(m[i] >= MULTIPLIER_SCALE, "multiplier < 1x");
+            if (m[i] > mx) mx = m[i];
+        }
+        bucketMultiplier = m;
+        maxMultiplier = mx;
+        emit MultipliersChanged(m);
     }
 
     function setBettingDuration(uint64 _seconds) external onlyOwner {
         require(!roundActive, "round active");
         require(_seconds > 0, "zero duration");
         bettingDuration = _seconds;
-        emit ConfigChanged(betAmount, extremeMultiplier, middleMultiplier, bettingDuration);
+        emit ConfigChanged(betAmount, bettingDuration);
     }
 }
