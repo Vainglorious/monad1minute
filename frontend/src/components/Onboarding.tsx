@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface Props {
-  onCreated: () => void;
+  onCreated: (funded?: string) => void;
 }
 
 export default function Onboarding({ onCreated }: Props) {
@@ -27,7 +27,7 @@ export default function Onboarding({ onCreated }: Props) {
         setError(data.error ?? "Something went wrong.");
         return;
       }
-      onCreated();
+      onCreated(typeof data.funded === "string" ? data.funded : undefined);
     } catch {
       setError("Network error. Please try again.");
     } finally {

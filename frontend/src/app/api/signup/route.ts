@@ -59,8 +59,10 @@ export async function POST(req: NextRequest) {
 
   // Fund the new wallet from the deployer. If this fails, the signup fails:
   // roll back the user row so no unfunded account is left behind.
+  let fundedAmount: string;
   try {
-    await fundNewWallet(user.address);
+    const funded = await fundNewWallet(user.address);
+    fundedAmount = funded.amount;
   } catch (err) {
     console.error("Signup funding failed:", err);
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest) {
   const token = await signSession({ userId: user.id, username: user.username });
   const res = NextResponse.json({
     user: { username: user.username, address: user.address },
+    funded: fundedAmount,
   });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,

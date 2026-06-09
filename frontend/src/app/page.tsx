@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Onboarding from "@/components/Onboarding";
 import Dashboard, { DashboardUser } from "@/components/Dashboard";
+import Toast from "@/components/Toast";
 
 type State =
   | { status: "loading" }
@@ -11,6 +12,7 @@ type State =
 
 export default function Home() {
   const [state, setState] = useState<State>({ status: "loading" });
+  const [toast, setToast] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -30,24 +32,35 @@ export default function Home() {
     refresh();
   }, [refresh]);
 
+  const onCreated = useCallback(
+    async (funded?: string) => {
+      if (funded) setToast(`Received ${Number(funded)} MON 🎉`);
+      await refresh();
+    },
+    [refresh],
+  );
+
   const logout = useCallback(async () => {
     await fetch("/api/logout", { method: "POST" });
+    setToast(null);
     setState({ status: "onboarding" });
   }, []);
 
-  if (state.status === "loading") {
-    return (
-      <div className="screen">
-        <div className="center-fill">
-          <div className="spinner" />
+  return (
+    <>
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+
+      {state.status === "loading" && (
+        <div className="screen">
+          <div className="center-fill">
+            <div className="spinner" />
+          </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (state.status === "onboarding") {
-    return <Onboarding onCreated={refresh} />;
-  }
+      {state.status === "onboarding" && <Onboarding onCreated={onCreated} />}
 
-  return <Dashboard user={state.user} onLogout={logout} />;
+      {state.status === "ready" && <Dashboard user={state.user} onLogout={logout} />}
+    </>
+  );
 }
