@@ -68,11 +68,13 @@ export async function GET(req: NextRequest) {
 function serializeConfig(c: {
   betAmount: bigint;
   bucketMultipliers: bigint[];
+  multiplierScale: bigint;
   bettingDuration: number;
 }) {
   return {
     betAmount: c.betAmount.toString(),
     bucketMultipliers: c.bucketMultipliers.map((m) => m.toString()),
+    multiplierScale: c.multiplierScale.toString(),
     bettingDuration: c.bettingDuration,
   };
 }

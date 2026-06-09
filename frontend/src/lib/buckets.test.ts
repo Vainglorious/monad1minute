@@ -4,6 +4,7 @@ import {
   isValidBucket,
   derivePhase,
   potentialPayoutWei,
+  multiplierLabel,
   BUCKETS,
 } from "./buckets";
 
@@ -43,17 +44,22 @@ describe("derivePhase", () => {
 
 describe("potentialPayoutWei", () => {
   const stake = 200000000000000000n; // 0.2 MON
-  // per-bucket multipliers scaled by 100: A:20x B:10x C:2.8x D:2.8x E:10x F:20x
-  const mult = [2000n, 1000n, 280n, 280n, 1000n, 2000n];
-  it("extremes (A,F) use 20x", () => {
-    expect(potentialPayoutWei(0, stake, mult)).toBe((stake * 2000n) / 100n);
-    expect(potentialPayoutWei(5, stake, mult)).toBe((stake * 2000n) / 100n);
+  // [2000,1000,280,280,1000,2000] scaled by 100 → 20x/10x/2.8x/...
+  const mults = [2000n, 1000n, 280n, 280n, 1000n, 2000n];
+  const scale = 100n;
+  it("applies the per-bucket multiplier / scale", () => {
+    expect(potentialPayoutWei(0, stake, mults, scale)).toBe((stake * 2000n) / 100n);
+    expect(potentialPayoutWei(2, stake, mults, scale)).toBe((stake * 280n) / 100n);
   });
-  it("mid (B,E) use 10x", () => {
-    expect(potentialPayoutWei(1, stake, mult)).toBe((stake * 1000n) / 100n);
-    expect(potentialPayoutWei(4, stake, mult)).toBe((stake * 1000n) / 100n);
+  it("returns 0 for a zero scale", () => {
+    expect(potentialPayoutWei(0, stake, mults, 0n)).toBe(0n);
   });
-  it("near-zero (C,D) use 2.8x", () => {
-    expect(potentialPayoutWei(2, stake, mult)).toBe((stake * 280n) / 100n);
+});
+
+describe("multiplierLabel", () => {
+  it("formats integer and fractional multipliers", () => {
+    expect(multiplierLabel(2000n, 100n)).toBe("20×");
+    expect(multiplierLabel(280n, 100n)).toBe("2.8×");
+    expect(multiplierLabel(1000n, 100n)).toBe("10×");
   });
 });
