@@ -3,6 +3,7 @@ import { type Address } from "viem";
 import { getSessionUser } from "@/lib/auth";
 import { getMonBalance } from "@/lib/monad";
 import { scrubError } from "@/lib/funding";
+import { coinbaseOpenAt } from "@/lib/coinbase";
 import {
   getCurrentRoundId,
   getRound,
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
         now,
         config: serializeConfig(config),
         round: null,
+        basePrice: null,
         bucketCounts: [],
         myBet: null,
         balance,
@@ -41,6 +43,9 @@ export async function GET(req: NextRequest) {
       getUserBet(roundId, user.address as Address),
       getMonBalance(user.address).catch(() => null),
     ]);
+
+    // Canonical round-open = Coinbase candle open at startTime (matches settlement).
+    const basePrice = await coinbaseOpenAt(round.startTime).catch(() => null);
 
     return NextResponse.json({
       now,
@@ -55,6 +60,7 @@ export async function GET(req: NextRequest) {
         winnerCount: round.winnerCount,
         payoutPerWinner: round.payoutPerWinner.toString(),
       },
+      basePrice,
       bucketCounts,
       myBet: myBet.placed ? myBet : null,
       balance,
