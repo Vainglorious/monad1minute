@@ -158,7 +158,8 @@ body {
 }
 
 .card {
-  background: var(--bg-elev);
+  /* border-only cards — page bg shows through */
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
