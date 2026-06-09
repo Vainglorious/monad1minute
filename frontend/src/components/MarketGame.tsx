@@ -81,6 +81,8 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   const pendingBetRef = useRef<{ bucket: number; roundId: string } | null>(null);
   // Last round we notified the parent about resolving (refreshes History/balance).
   const notifiedResolvedRef = useRef<string | null>(null);
+  // Round we already auto-claimed, so the effect fires once per win.
+  const autoClaimedRef = useRef<string | null>(null);
 
   const chartRef = useRef<LiveChartV2Handle | null>(null);
   const handleLiveTick = useCallback((timeSec: number, value: number) => {
@@ -139,6 +141,19 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
       onBalanceChange?.();
     }
   }, [data, onBalanceChange]);
+
+  // Auto-claim: when the resolved round is a win for us, claim it without a tap.
+  // Fires once per round; on failure the manual Claim button appears as a retry.
+  useEffect(() => {
+    const r = data?.round;
+    const bet = data?.myBet;
+    if (!r?.resolved || !bet?.placed || bet.claimed) return;
+    if (bet.bucket !== r.winner) return;
+    if (autoClaimedRef.current === r.roundId) return;
+    autoClaimedRef.current = r.roundId;
+    claim(r.roundId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   async function placeBet(bucket: number) {
     if (busy) return;
@@ -341,9 +356,14 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
         </div>
       )}
 
-      {canClaim && round && (
-        <button className="btn" disabled={busy} onClick={() => claim(round.roundId)}>
-          {busy ? "Claiming…" : `Claim ${fmtMon(round.payoutPerWinner)} MON`}
+      {canClaim && round && busy && (
+        <div className="bet-status muted">
+          Claiming {fmtMon(round.payoutPerWinner)} MON…
+        </div>
+      )}
+      {canClaim && round && !busy && error && (
+        <button className="btn" onClick={() => claim(round.roundId)}>
+          Retry claim {fmtMon(round.payoutPerWinner)} MON
         </button>
       )}
       {won && myBet?.claimed && <div className="bet-status muted">Winnings claimed ✓</div>}
