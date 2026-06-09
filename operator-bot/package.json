@@ -1,0 +1,13 @@
+{
+  "name": "pricebetgame-operator-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Operator bot for PriceBetGame: runs rounds on a 30s cycle, simulates a BTC market, and resolves each round.",
+  "scripts": {
+    "start": "node --env-file=../.env index.js"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  }
+}
