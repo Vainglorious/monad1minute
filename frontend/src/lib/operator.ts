@@ -44,6 +44,7 @@ async function startNextRound(): Promise<string> {
   const hash = await sendStartRound();
   await confirm(hash, "startRound");
   const id = await getCurrentRoundId();
+  console.log(`[operator] startRound ok → round ${id} (${hash})`);
   return id.toString();
 }
 
@@ -70,8 +71,12 @@ export async function runTick(asset = "BTC"): Promise<TickResult> {
       }
 
       const bps = toBps(open, close);
+      console.log(
+        `[operator] resolving round ${id}: open ${open} → close ${close} = ${bps >= 0 ? "+" : ""}${bps} bps`,
+      );
       const hash = await sendResolveRound(bps);
       await confirm(hash, "resolveRound");
+      console.log(`[operator] resolveRound ok for round ${id} (${hash})`);
 
       const newRound = await startNextRound();
       return { action: "resolved-and-started", resolvedRound: id.toString(), bps, newRound };
