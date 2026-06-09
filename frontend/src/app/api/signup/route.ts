@@ -3,6 +3,7 @@ import { validateUsername } from "@/lib/username";
 import { createServerWallet } from "@/lib/privy";
 import { prisma } from "@/lib/db";
 import { signSession, SESSION_COOKIE } from "@/lib/session";
+import { fundNewWallet, FundingError, signupFundingAmount } from "@/lib/funding";
 
 export const runtime = "nodejs";
 
@@ -56,9 +57,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 
+  // Fund the new wallet from the deployer. If this fails, the signup fails:
+  // roll back the user row so no unfunded account is left behind.
+  let fundedAmount: string;
+  try {
+    const funded = await fundNewWallet(user.address);
+    fundedAmount = funded.amount;
+  } catch (err) {
+    // If the transfer was already broadcast, funds may have left the deployer —
+    // keep the account (funds in flight); the dashboard balance will reflect it.
+    if (err instanceof FundingError && err.broadcast) {
+      console.warn(
+        `Signup funding broadcast but unconfirmed for user ${user.id} (tx ${err.hash}): ${err.message}`,
+      );
+      fundedAmount = signupFundingAmount();
+    } else {
+      // Pre-broadcast failure: nothing left the deployer, safe to roll back.
+      console.error(
+        `Signup funding failed before broadcast: ${err instanceof Error ? err.name : "unknown"}`,
+      );
+      const rolledBack = await prisma.user
+        .delete({ where: { id: user.id } })
+        .then(() => true)
+        .catch(() => false);
+      if (!rolledBack) {
+        console.error(`Rollback failed — orphaned user row ${user.id}`);
+      }
+      return NextResponse.json(
+        { error: "Could not fund your wallet. Please try again." },
+        { status: 502 },
+      );
+    }
+  }
+
   const token = await signSession({ userId: user.id, username: user.username });
   const res = NextResponse.json({
     user: { username: user.username, address: user.address },
+    funded: fundedAmount,
   });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,

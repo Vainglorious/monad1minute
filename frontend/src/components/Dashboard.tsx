@@ -57,7 +57,7 @@ export default function Dashboard({ user, onLogout }: Props) {
         </div>
 
         <div className="card">
-          <div className="label-xs">Balance · Monad Testnet</div>
+          <div className="label-xs">Balance · Monad</div>
           <div className="balance">
             {balanceDisplay}
             <span className="unit">MON</span>
@@ -85,7 +85,7 @@ export default function Dashboard({ user, onLogout }: Props) {
         </div>
 
         <p className="muted" style={{ textAlign: "center" }}>
-          Fund this wallet with testnet MON to start playing. Rounds coming soon.
+          Your wallet is funded and ready. 1-minute rounds coming soon.
         </p>
       </div>
 

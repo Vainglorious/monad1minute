@@ -14,7 +14,7 @@ See the design spec: [`docs/superpowers/specs/2026-06-09-onboarding-design.md`](
 - **Next.js** (App Router) — frontend + API routes
 - **Privy server SDK** — custodial EVM wallet creation
 - **Postgres + Prisma** — user persistence
-- **viem** — Monad testnet balance reads
+- **viem** — Monad mainnet balance reads + deployer-funded signups
 - **jose** — signed, device-bound session cookies
 
 ## Setup
@@ -31,7 +31,10 @@ See the design spec: [`docs/superpowers/specs/2026-06-09-onboarding-design.md`](
    - `PRIVY_AUTHORIZATION_KEY` — optional now; needed when the backend signs txns later.
    - `DATABASE_URL` — a Postgres connection string (Supabase / Neon / local).
    - `SESSION_SECRET` — `openssl rand -base64 32`.
-   - `MONAD_RPC_URL`, `MONAD_CHAIN_ID` — defaults target Monad testnet.
+   - `MONAD_RPC`, `MONAD_CHAIN_ID` — default to Monad mainnet (`https://rpc.monad.xyz`, `143`).
+   - `DEPLOYER_PRIVATE_KEY` (+ optional `DEPLOYER_ADDRESS`) — funds each new wallet at signup.
+   - `SIGNUP_FUNDING_MON` — amount sent to each new wallet (default `0.1`). On mainnet this is
+     **real money** sent to anyone who signs up — add anti-abuse before a public launch.
 
 3. **Create the database schema**
 

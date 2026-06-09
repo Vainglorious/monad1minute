@@ -1,21 +1,30 @@
 import { createPublicClient, http, defineChain, formatEther } from "viem";
 
-const RPC_URL = process.env.MONAD_RPC_URL ?? "https://testnet-rpc.monad.xyz";
-const CHAIN_ID = Number(process.env.MONAD_CHAIN_ID ?? "10143");
+// Network is env-driven so testnet/mainnet is a config switch.
+// Defaults target Monad mainnet.
+export const RPC_URL =
+  process.env.MONAD_RPC ?? process.env.MONAD_RPC_URL ?? "https://rpc.monad.xyz";
+const CHAIN_ID = Number(process.env.MONAD_CHAIN_ID ?? "143");
 
-export const monadTestnet = defineChain({
+export const monadChain = defineChain({
   id: CHAIN_ID,
-  name: "Monad Testnet",
+  name: CHAIN_ID === 143 ? "Monad" : "Monad Testnet",
   nativeCurrency: { name: "Monad", symbol: "MON", decimals: 18 },
   rpcUrls: { default: { http: [RPC_URL] } },
   blockExplorers: {
-    default: { name: "Monad Explorer", url: "https://testnet.monadexplorer.com" },
+    default: {
+      name: "Monad Explorer",
+      url:
+        CHAIN_ID === 143
+          ? "https://monadexplorer.com"
+          : "https://testnet.monadexplorer.com",
+    },
   },
-  testnet: true,
+  testnet: CHAIN_ID !== 143,
 });
 
-const publicClient = createPublicClient({
-  chain: monadTestnet,
+export const publicClient = createPublicClient({
+  chain: monadChain,
   transport: http(RPC_URL),
 });
 
