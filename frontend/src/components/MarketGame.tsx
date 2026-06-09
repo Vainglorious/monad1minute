@@ -79,6 +79,8 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   // Optimistically-placed bet, kept until the chain read catches up so a
   // background poll doesn't momentarily clear the "YOUR BET" highlight.
   const pendingBetRef = useRef<{ bucket: number; roundId: string } | null>(null);
+  // Last round we notified the parent about resolving (refreshes History/balance).
+  const notifiedResolvedRef = useRef<string | null>(null);
 
   const chartRef = useRef<LiveChartV2Handle | null>(null);
   const handleLiveTick = useCallback((timeSec: number, value: number) => {
@@ -127,6 +129,16 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // When a round resolves, nudge the parent once so History/Leaderboard/balance
+  // refetch — otherwise past bets sit on "pending" until a manual page refresh.
+  useEffect(() => {
+    const r = data?.round;
+    if (r?.resolved && notifiedResolvedRef.current !== r.roundId) {
+      notifiedResolvedRef.current = r.roundId;
+      onBalanceChange?.();
+    }
+  }, [data, onBalanceChange]);
 
   async function placeBet(bucket: number) {
     if (busy) return;

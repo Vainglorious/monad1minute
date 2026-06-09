@@ -1,21 +1,26 @@
 // PriceBetGame operator bot
 // --------------------------
-// Drives the betting game on a fixed cycle:
-//   startRound()  ->  snapshot BTC open price  ->  wait the window  ->  snapshot BTC close price
-//   ->  resolveRound(bps)  ->  repeat
+// Drives the betting game on a tight cycle with near-zero dead time:
+//   startRound()  ->  wait the window  ->  resolveRound(bps)  ->  repeat
 //
-// Uses a REAL BTC/USD feed (see pricefeed.js): live ticks over a WebSocket, REST fallback.
-// It resolves every round even if nobody bet.
+// Settlement is reconstructed from Coinbase 1-minute candles (candles.js):
+//   open  = candle open at round.startTime   (== the chart's BASE line)
+//   close = candle open at round.lockTime
+// so the price players see and the price that settles are one and the same,
+// and anyone can re-verify a round against Coinbase's public candles.
+//
+// This bot is the PRIMARY operator. The Vercel /api/operator/tick endpoint
+// remains as a manual self-heal fallback (no cron) — run ONE operator.
 //
 // Config comes from the project root .env (loaded via `node --env-file=../.env`):
 //   MONAD_RPC, PRICEBETGAME_ADDRESS, OPERATOR_PRIVATE_KEY
-// Optional env: PRICE_SOURCE (binance | binanceus | coinbase), ASSET (default BTC).
+// Optional env: ASSET (default BTC), COINBASE_REST_HOST.
 //
 // Run:  cd operator-bot && npm install && npm start
 
 import { createPublicClient, createWalletClient, http, defineChain, formatEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { PriceFeed } from './pricefeed.js'
+import { fetchCandles, pickOpenAt, roundPrices } from './candles.js'
 
 // ---------------------------------------------------------------------------
 // Config
@@ -24,6 +29,7 @@ import { PriceFeed } from './pricefeed.js'
 const RPC = process.env.MONAD_RPC || 'https://rpc.monad.xyz'
 const CONTRACT = process.env.PRICEBETGAME_ADDRESS
 const PK = process.env.OPERATOR_PRIVATE_KEY
+const ASSET = (process.env.ASSET || 'BTC').toUpperCase()
 
 if (!CONTRACT || !PK) {
   console.error('Missing PRICEBETGAME_ADDRESS or OPERATOR_PRIVATE_KEY in env. Run with `node --env-file=../.env index.js`.')
@@ -31,7 +37,7 @@ if (!CONTRACT || !PK) {
 }
 
 const MAX_ABS_BPS = 300       // clamp extreme outliers to +/-3%
-const LOCK_BUFFER_S = 3       // extra seconds to wait past lockTime before resolving (block-timestamp safety)
+const LOCK_BUFFER_S = 3       // extra seconds past lockTime before resolving (block-timestamp safety)
 
 const monad = defineChain({
   id: 143,
@@ -59,9 +65,8 @@ const ABI = [
 ]
 
 const account = privateKeyToAccount(PK.startsWith('0x') ? PK : `0x${PK}`)
-const pub = createPublicClient({ chain: monad, transport: http(RPC) })
+const pub = createPublicClient({ chain: monad, transport: http(RPC), pollingInterval: 500 })
 const wallet = createWalletClient({ account, chain: monad, transport: http(RPC) })
-const feed = new PriceFeed()
 
 const BUCKETS = ['A (up >+0.1%)', 'B (+0.05..+0.1%)', 'C (0..+0.05%)', 'D (-0.05..0%)', 'E (-0.1..-0.05%)', 'F (down <-0.1%)']
 
@@ -81,7 +86,7 @@ function toBps(open, close) {
 
 async function send(functionName, args = []) {
   const hash = await wallet.writeContract({ address: CONTRACT, abi: ABI, functionName, args })
-  const receipt = await pub.waitForTransactionReceipt({ hash })
+  const receipt = await pub.waitForTransactionReceipt({ hash, pollingInterval: 400 })
   if (receipt.status !== 'success') throw new Error(`${functionName} reverted (${hash})`)
   return receipt
 }
@@ -89,6 +94,16 @@ async function send(functionName, args = []) {
 async function readRound(id) {
   const r = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'rounds', args: [id] })
   return { startTime: r[0], lockTime: r[1], resolved: r[2], winner: r[3], betCount: r[4], winnerCount: r[5], payoutPerWinner: r[6] }
+}
+
+// Resolve `id` from candle-reconstructed prices. Settles 0 bps only as a last
+// resort (candles down after retries) so a stuck round never blocks the game.
+async function resolveFromCandles(id, round) {
+  const prices = await roundPrices(round.startTime, round.lockTime, ASSET)
+  const bps = prices ? toBps(prices.open, prices.close) : 0
+  if (!prices) console.error(`⚠ candles unavailable after retries — settling round ${id} neutral (0 bps)`)
+  await send('resolveRound', [BigInt(bps)])
+  return { bps, prices }
 }
 
 // ---------------------------------------------------------------------------
@@ -106,22 +121,16 @@ async function resolveOpenRoundIfAny() {
     console.log(`↺ recovering: round ${id} still open, waiting ${waitMs / 1000}s to resolve…`)
     await sleep(waitMs)
   }
-  const close = await feed.getPrice()
-  const bps = toBps(close, close) // no open snapshot on recovery → neutral 0
-  await send('resolveRound', [BigInt(bps)])
-  console.log(`↺ recovered round ${id}: resolved ${bps} bps`)
+  const { bps } = await resolveFromCandles(id, r)
+  console.log(`↺ recovered round ${id}: resolved ${bps >= 0 ? '+' : ''}${bps} bps`)
 }
 
 async function runForever() {
-  console.log('PriceBetGame operator bot (real price feed)')
+  console.log('PriceBetGame operator bot (Coinbase candle settlement)')
   console.log('  operator :', account.address)
   console.log('  contract :', CONTRACT)
   console.log('  rpc      :', RPC)
-  console.log('  feed     :', feed.key, `(${feed.asset}/USD)`)
-
-  feed.connect()
-  const seeded = await feed.seed()
-  console.log('  seed px  :', seeded != null ? `$${fmt(seeded)}` : 'n/a (will retry live)')
+  console.log('  asset    :', `${ASSET}/USD (Coinbase 1m candles)`)
 
   const duration = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'bettingDuration' })
   const betAmount = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'betAmount' })
@@ -132,30 +141,28 @@ async function runForever() {
   while (true) {
     try {
       // 0) self-heal: never call startRound while a round is still active.
-      //    If a previous cycle failed mid-way (e.g. resolveRound hit an RPC
-      //    error), the round is left unresolved — resolve it first, otherwise
-      //    startRound reverts "round active" and the loop spins forever.
       await resolveOpenRoundIfAny()
 
-      // 1) snapshot open price, open the round
-      const open = await feed.getPrice()
+      // 1) open the round; its BASE price is the candle open at startTime
+      //    (the exact line the frontend chart draws).
       await send('startRound')
       const id = await pub.readContract({ address: CONTRACT, abi: ABI, functionName: 'currentRoundId' })
-      console.log(`\n▶ Round ${id} OPEN — ${feed.asset} $${fmt(open)} — betting for ${Number(duration)}s`)
+      const round = await readRound(id)
+      const candles = await fetchCandles(ASSET)
+      const base = candles ? pickOpenAt(candles, Number(round.startTime)) : null
+      console.log(`\n▶ Round ${id} OPEN — base ${base != null ? `$${fmt(base)}` : 'n/a'} — betting for ${Number(duration)}s`)
 
       // 2) wait out the betting window (+ buffer so block.timestamp >= lockTime)
       await sleep((Number(duration) + LOCK_BUFFER_S) * 1000)
 
-      // 3) snapshot close price, compute bps, resolve
-      const close = await feed.getPrice()
-      const bps = toBps(open, close)
-      await send('resolveRound', [BigInt(bps)])
+      // 3) settle from candles: open@startTime -> close(open)@lockTime
+      const { bps, prices } = await resolveFromCandles(id, round)
 
       // 4) report
       const r = await readRound(id)
       const arrow = bps > 0 ? '▲' : bps < 0 ? '▼' : '▬'
       console.log(
-        `■ Round ${id} RESOLVED — ${feed.asset} $${fmt(open)} ${arrow} $${fmt(close)} (${bps >= 0 ? '+' : ''}${bps} bps) ` +
+        `■ Round ${id} RESOLVED — ${prices ? `$${fmt(prices.open)} ${arrow} $${fmt(prices.close)}` : 'candles n/a'} (${bps >= 0 ? '+' : ''}${bps} bps) ` +
         `→ bucket ${BUCKETS[r.winner]} | ${r.betCount} bet(s), ${r.winnerCount} winner(s)` +
         (r.winnerCount > 0n ? `, payout ${formatEther(r.payoutPerWinner)} MON each` : '')
       )
@@ -179,11 +186,10 @@ async function runForever() {
   }
 }
 
-process.on('SIGINT', () => { feed.close(); process.exit(0) })
-process.on('SIGTERM', () => { feed.close(); process.exit(0) })
+process.on('SIGINT', () => process.exit(0))
+process.on('SIGTERM', () => process.exit(0))
 
 runForever().catch((e) => {
   console.error('fatal:', e)
-  feed.close()
   process.exit(1)
 })

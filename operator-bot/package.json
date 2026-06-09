@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Operator bot for PriceBetGame: runs rounds on a 30s cycle, simulates a BTC market, and resolves each round.",
+  "description": "Operator bot for PriceBetGame: runs rounds back-to-back and settles each from Coinbase 1-minute candles (matches the frontend BASE line).",
   "scripts": {
     "start": "node --env-file=../.env index.js"
   },
   "dependencies": {
-    "viem": "^2.21.0",
-    "ws": "^8.18.0"
+    "viem": "^2.21.0"
   }
 }
