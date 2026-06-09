@@ -20,6 +20,12 @@ export const monadChain = defineChain({
           : "https://testnet.monadexplorer.com",
     },
   },
+  // Multicall3 (canonical address). Lets viem aggregate many reads into one
+  // eth_call so the public RPC isn't hammered with parallel requests — it
+  // rate-limits those, which surfaced as /api/round 502s under load.
+  contracts: {
+    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" },
+  },
   testnet: CHAIN_ID !== 143,
 });
 

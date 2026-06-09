@@ -76,13 +76,17 @@ export async function getRound(roundId: bigint): Promise<RoundState> {
 }
 
 export async function getConfig(): Promise<GameConfig> {
+  // One eth_call via Multicall3 instead of four parallel reads.
   const [betAmount, bucketMultipliers, multiplierScale, bettingDuration] =
-    await Promise.all([
-      read<bigint>("betAmount"),
-      read<readonly bigint[]>("getBucketMultipliers"),
-      read<bigint>("MULTIPLIER_SCALE"),
-      read<bigint>("bettingDuration"),
-    ]);
+    (await publicClient.multicall({
+      allowFailure: false,
+      contracts: [
+        { address: CONTRACT_ADDRESS, abi, functionName: "betAmount" },
+        { address: CONTRACT_ADDRESS, abi, functionName: "getBucketMultipliers" },
+        { address: CONTRACT_ADDRESS, abi, functionName: "MULTIPLIER_SCALE" },
+        { address: CONTRACT_ADDRESS, abi, functionName: "bettingDuration" },
+      ],
+    })) as [bigint, readonly bigint[], bigint, bigint];
   return {
     betAmount,
     bucketMultipliers: [...bucketMultipliers],
@@ -100,11 +104,16 @@ export async function getUserBet(
 }
 
 export async function getBucketCounts(roundId: bigint): Promise<number[]> {
-  const counts = await Promise.all(
-    Array.from({ length: BUCKET_COUNT }, (_, i) =>
-      read<bigint>("bucketCount", [roundId, i]),
-    ),
-  );
+  // One eth_call via Multicall3 instead of six parallel reads.
+  const counts = (await publicClient.multicall({
+    allowFailure: false,
+    contracts: Array.from({ length: BUCKET_COUNT }, (_, i) => ({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: "bucketCount",
+      args: [roundId, i],
+    })),
+  })) as bigint[];
   return counts.map((c) => Number(c));
 }
 

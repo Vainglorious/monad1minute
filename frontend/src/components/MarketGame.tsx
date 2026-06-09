@@ -75,6 +75,7 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inFlightRef = useRef(false);
 
   const chartRef = useRef<LiveChartV2Handle | null>(null);
   const handleLiveTick = useCallback((timeSec: number, value: number) => {
@@ -83,6 +84,10 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   const { history, livePrice, dir } = useLivePriceFeed(asset, handleLiveTick);
 
   const load = useCallback(async () => {
+    // Skip if a previous poll is still in flight so requests never pile up
+    // (each /api/round hits the RPC; overlapping polls can saturate it).
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       const res = await fetch("/api/round", { cache: "no-store" });
       if (!res.ok) return;
@@ -91,6 +96,8 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
       setFetchedAtMs(Date.now());
     } catch {
       /* transient; next poll retries */
+    } finally {
+      inFlightRef.current = false;
     }
   }, []);
 
