@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "1 Minute · Monad",
-  description: "Predict crypto up or down. Every minute.",
+  description: "Predict crypto up or down.  Every minute.",
 };
 
 export const viewport: Viewport = {
@@ -13,7 +13,11 @@ export const viewport: Viewport = {
   themeColor: "#0b0b12",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>{children}</body>
