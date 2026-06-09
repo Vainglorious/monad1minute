@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import Betting from "@/components/Betting";
 import History from "@/components/History";
+import LiveMarketChart from "@/components/LiveMarketChart";
 
 export interface DashboardUser {
   username: string;
@@ -67,6 +68,8 @@ export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props)
       </div>
 
       <div className="stack" style={{ flex: 1 }}>
+        <LiveMarketChart asset="btc" />
+
         <Betting onToast={onToast} onBalanceChange={afterAction} />
 
         <History refreshKey={version} />

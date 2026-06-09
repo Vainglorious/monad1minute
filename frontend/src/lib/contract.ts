@@ -1,4 +1,10 @@
-import { createWalletClient, http, type Abi, type Address, type Hex } from "viem";
+import {
+  createWalletClient,
+  http,
+  type Abi,
+  type Address,
+  type Hex,
+} from "viem";
 import { createViemAccount } from "@privy-io/server-auth/viem";
 import abiJson from "./abi/PriceBetGame.json";
 import { publicClient, monadChain, RPC_URL } from "./monad";
@@ -7,11 +13,14 @@ import { getPrivyClient } from "./privy";
 export const abi = abiJson as unknown as Abi;
 
 export const CONTRACT_ADDRESS = (process.env.PRICEBETGAME_ADDRESS ??
-  "0x0f6Cce5f0A07aA77e6E36E407a72e83A4503C383") as Address;
+  "0x7639cc0fd49e8d574a75c71874c7a37665f751c0") as Address;
 
 export const BUCKET_COUNT = 6;
 
-function read<T>(functionName: string, args: readonly unknown[] = []): Promise<T> {
+function read<T>(
+  functionName: string,
+  args: readonly unknown[] = [],
+): Promise<T> {
   return publicClient.readContract({
     address: CONTRACT_ADDRESS,
     abi,
@@ -49,9 +58,9 @@ export async function getCurrentRoundId(): Promise<bigint> {
 }
 
 export async function getRound(roundId: bigint): Promise<RoundState> {
-  const r = await read<[bigint, bigint, boolean, number, bigint, bigint, bigint]>("rounds", [
-    roundId,
-  ]);
+  const r = await read<
+    [bigint, bigint, boolean, number, bigint, bigint, bigint]
+  >("rounds", [roundId]);
   return {
     roundId,
     startTime: Number(r[0]),
@@ -65,12 +74,13 @@ export async function getRound(roundId: bigint): Promise<RoundState> {
 }
 
 export async function getConfig(): Promise<GameConfig> {
-  const [betAmount, extremeMultiplier, middleMultiplier, bettingDuration] = await Promise.all([
-    read<bigint>("betAmount"),
-    read<bigint>("extremeMultiplier"),
-    read<bigint>("middleMultiplier"),
-    read<bigint>("bettingDuration"),
-  ]);
+  const [betAmount, extremeMultiplier, middleMultiplier, bettingDuration] =
+    await Promise.all([
+      read<bigint>("betAmount"),
+      read<bigint>("extremeMultiplier"),
+      read<bigint>("middleMultiplier"),
+      read<bigint>("bettingDuration"),
+    ]);
   return {
     betAmount,
     extremeMultiplier,
@@ -79,7 +89,10 @@ export async function getConfig(): Promise<GameConfig> {
   };
 }
 
-export async function getUserBet(roundId: bigint, address: Address): Promise<UserBet> {
+export async function getUserBet(
+  roundId: bigint,
+  address: Address,
+): Promise<UserBet> {
   const b = await read<[number, boolean, boolean]>("bets", [roundId, address]);
   return { bucket: Number(b[0]), placed: b[1], claimed: b[2] };
 }
@@ -106,9 +119,15 @@ async function userWalletClient(user: SignableUser) {
     address: user.address as Hex,
     // Same class at runtime; the /viem subpath resolves PrivyClient to a
     // different .d.ts, so cast to the exact param type to satisfy tsc.
-    privy: getPrivyClient() as unknown as Parameters<typeof createViemAccount>[0]["privy"],
+    privy: getPrivyClient() as unknown as Parameters<
+      typeof createViemAccount
+    >[0]["privy"],
   });
-  return createWalletClient({ account, chain: monadChain, transport: http(RPC_URL) });
+  return createWalletClient({
+    account,
+    chain: monadChain,
+    transport: http(RPC_URL),
+  });
 }
 
 export async function sendPlaceBet(
@@ -128,7 +147,10 @@ export async function sendPlaceBet(
   });
 }
 
-export async function sendClaim(user: SignableUser, roundId: bigint): Promise<Hex> {
+export async function sendClaim(
+  user: SignableUser,
+  roundId: bigint,
+): Promise<Hex> {
   const wallet = await userWalletClient(user);
   return wallet.writeContract({
     account: wallet.account,
