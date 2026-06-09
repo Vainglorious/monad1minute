@@ -3,6 +3,7 @@ import { validateUsername } from "@/lib/username";
 import { createServerWallet } from "@/lib/privy";
 import { prisma } from "@/lib/db";
 import { signSession, SESSION_COOKIE } from "@/lib/session";
+import { fundNewWallet } from "@/lib/funding";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,19 @@ export async function POST(req: NextRequest) {
     }
     console.error("Persist user failed:", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+
+  // Fund the new wallet from the deployer. If this fails, the signup fails:
+  // roll back the user row so no unfunded account is left behind.
+  try {
+    await fundNewWallet(user.address);
+  } catch (err) {
+    console.error("Signup funding failed:", err);
+    await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+    return NextResponse.json(
+      { error: "Could not fund your wallet. Please try again." },
+      { status: 502 },
+    );
   }
 
   const token = await signSession({ userId: user.id, username: user.username });
