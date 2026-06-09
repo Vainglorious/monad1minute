@@ -604,6 +604,72 @@ body {
   color: var(--muted);
 }
 
+/* --- leaderboard --- */
+.lb {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 44px 44px 64px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.lb-row.lb-head {
+  border-top: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lb-rank {
+  color: var(--muted);
+}
+
+.lb-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-num {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-num.win {
+  color: var(--up);
+  font-weight: 700;
+}
+
+.lb-row.me .lb-name,
+.lb-row.me .lb-rank {
+  color: var(--accent-2);
+}
+
+.lb-you {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent-2);
+  border: 1px solid var(--accent-2);
+  border-radius: 4px;
+  padding: 1px 4px;
+  vertical-align: 2px;
+}
+
 /* --- receive --- */
 .receive-head {
   display: flex;

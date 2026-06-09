@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import History from "@/components/History";
+import Leaderboard from "@/components/Leaderboard";
 import MarketGame from "@/components/MarketGame";
 
 export interface DashboardUser {
@@ -68,6 +69,8 @@ export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props)
 
       <div className="stack" style={{ flex: 1 }}>
         <MarketGame asset="btc" onToast={onToast} onBalanceChange={afterAction} />
+
+        <Leaderboard refreshKey={version} />
 
         <History refreshKey={version} />
 
