@@ -4,6 +4,7 @@ import {
   isValidBucket,
   derivePhase,
   potentialPayoutWei,
+  multiplierLabel,
   BUCKETS,
 } from "./buckets";
 
@@ -43,11 +44,22 @@ describe("derivePhase", () => {
 
 describe("potentialPayoutWei", () => {
   const stake = 200000000000000000n; // 0.2 MON
-  it("extreme uses 5x", () => {
-    expect(potentialPayoutWei(0, stake, 5n, 2n)).toBe(stake * 5n);
-    expect(potentialPayoutWei(5, stake, 5n, 2n)).toBe(stake * 5n);
+  // [2000,1000,280,280,1000,2000] scaled by 100 → 20x/10x/2.8x/...
+  const mults = [2000n, 1000n, 280n, 280n, 1000n, 2000n];
+  const scale = 100n;
+  it("applies the per-bucket multiplier / scale", () => {
+    expect(potentialPayoutWei(0, stake, mults, scale)).toBe((stake * 2000n) / 100n);
+    expect(potentialPayoutWei(2, stake, mults, scale)).toBe((stake * 280n) / 100n);
   });
-  it("middle uses 2x", () => {
-    expect(potentialPayoutWei(2, stake, 5n, 2n)).toBe(stake * 2n);
+  it("returns 0 for a zero scale", () => {
+    expect(potentialPayoutWei(0, stake, mults, 0n)).toBe(0n);
+  });
+});
+
+describe("multiplierLabel", () => {
+  it("formats integer and fractional multipliers", () => {
+    expect(multiplierLabel(2000n, 100n)).toBe("20×");
+    expect(multiplierLabel(280n, 100n)).toBe("2.8×");
+    expect(multiplierLabel(1000n, 100n)).toBe("10×");
   });
 });

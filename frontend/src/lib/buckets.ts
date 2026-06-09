@@ -26,12 +26,25 @@ export function derivePhase(
   return nowSeconds < round.lockTime ? "open" : "locked";
 }
 
-/** Total returned to a winner (includes stake): stake × multiplier. */
+/**
+ * Total returned to a winner (includes stake): stake × bucketMultiplier / scale.
+ * Multipliers are per-bucket and scaled on-chain by `multiplierScale`.
+ */
 export function potentialPayoutWei(
   bucket: number,
   stakeWei: bigint,
-  extremeMultiplier: bigint,
-  middleMultiplier: bigint,
+  bucketMultipliers: bigint[],
+  multiplierScale: bigint,
 ): bigint {
-  return stakeWei * (isExtreme(bucket) ? extremeMultiplier : middleMultiplier);
+  const m = bucketMultipliers[bucket] ?? 0n;
+  if (multiplierScale === 0n) return 0n;
+  return (stakeWei * m) / multiplierScale;
+}
+
+/** Human label for a scaled multiplier, e.g. 2000/100 → "20×", 280/100 → "2.8×". */
+export function multiplierLabel(scaledMultiplier: bigint, multiplierScale: bigint): string {
+  if (multiplierScale === 0n) return "—";
+  const v = Number(scaledMultiplier) / Number(multiplierScale);
+  const s = Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, "");
+  return `${s}×`;
 }
