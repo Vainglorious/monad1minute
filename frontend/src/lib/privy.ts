@@ -25,6 +25,11 @@ function getClient(): PrivyClient {
   return client;
 }
 
+/** The shared Privy client (used by the wallet/viem adapter for signing). */
+export function getPrivyClient(): PrivyClient {
+  return getClient();
+}
+
 export interface CreatedWallet {
   walletId: string;
   address: string;
