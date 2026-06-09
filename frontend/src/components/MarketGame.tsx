@@ -43,16 +43,6 @@ interface Props {
   onBalanceChange?: () => void;
 }
 
-// Compact price-band labels for the rail (full labels live in lib/buckets).
-const SHORT_BAND = [
-  "> +0.1%",
-  "+.05–.1%",
-  "0–+.05%",
-  "0–-.05%",
-  "-.05–.1%",
-  "< -0.1%",
-] as const;
-
 const CHART_HEIGHT = 280;
 
 const fmtMon = (wei: string | bigint) => {
@@ -269,11 +259,12 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
         onClick={() => placeBet(bucket.id)}
         title={`${bucket.label} · pays ${fmtMon(payout)} MON`}
       >
-        <span className="rb-key">
-          {bucket.key} <span className="rb-mult">{multX}</span>
+        <span>
+          {isExtreme(bucket.id)
+            ? `${up ? "▲ +0.1%" : "▼ -0.1%"} · ${multX}`
+            : multX}
         </span>
-        <span className="rb-band">{SHORT_BAND[bucket.id]}</span>
-        <span className="rb-meta">{count} bet{count === 1 ? "" : "s"}</span>
+        {count > 0 && <span className="rb-count">· {count}</span>}
         {mine && <span className="rb-tag">{busy ? "…" : "YOU"}</span>}
         {winner && <span className="rb-tag win">WIN</span>}
       </button>
