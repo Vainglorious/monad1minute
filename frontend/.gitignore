@@ -10,4 +10,5 @@ out
 .DS_Store
 .vercel
 next-env.d.ts
+*.tsbuildinfo
 prisma/dev.db

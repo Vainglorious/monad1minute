@@ -583,6 +583,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  animation: flash 0.4s ease;
 }
 
 .chart-tooltip {
@@ -624,71 +625,33 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-/* --- live price ticker --- */
-.ticker {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: calc(9px + env(safe-area-inset-top)) 16px 9px;
-  background: rgba(11, 11, 18, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-}
-
-.ticker-asset {
-  color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.ticker-price {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  animation: flash 0.5s ease;
-}
-
-.ticker-price.up {
+/* --- live price (chart header) --- */
+.chart-price.up {
   color: var(--up);
 }
 
-.ticker-price.down {
+.chart-price.down {
   color: var(--down);
 }
 
-.ticker-arrow {
-  font-size: 10px;
+.chart-price-arrow {
+  font-size: 12px;
+  margin-left: 4px;
 }
 
-.ticker-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-}
-
-.ticker-live-dot {
+.chart-live-dot {
+  display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--up);
+  margin-right: 6px;
   animation: pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes flash {
   from {
-    opacity: 0.45;
+    opacity: 0.55;
   }
   to {
     opacity: 1;

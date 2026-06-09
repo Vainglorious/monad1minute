@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Onboarding from "@/components/Onboarding";
 import Dashboard, { DashboardUser } from "@/components/Dashboard";
 import Toast from "@/components/Toast";
-import PriceTicker from "@/components/PriceTicker";
 
 type State =
   | { status: "loading" }
@@ -49,7 +48,6 @@ export default function Home() {
 
   return (
     <>
-      <PriceTicker />
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
 
       {state.status === "loading" && (
