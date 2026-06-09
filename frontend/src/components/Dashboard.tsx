@@ -70,9 +70,9 @@ export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props)
       <div className="stack" style={{ flex: 1 }}>
         <MarketGame asset="btc" onToast={onToast} onBalanceChange={afterAction} />
 
-        <Leaderboard refreshKey={version} />
-
         <History refreshKey={version} />
+
+        <Leaderboard refreshKey={version} />
 
         <div className="card">
           <div className="receive-head" onClick={() => setShowReceive((s) => !s)}>
