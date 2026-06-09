@@ -5,6 +5,7 @@ import {
   type Address,
   type Hex,
 } from "viem";
+import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { createViemAccount } from "@privy-io/server-auth/viem";
 import abiJson from "./abi/PriceBetGame.json";
 import { publicClient, monadChain, RPC_URL } from "./monad";
@@ -160,5 +161,56 @@ export async function sendClaim(
     abi,
     functionName: "claim",
     args: [roundId],
+  });
+}
+
+// --- operator writes (signed by OPERATOR_PRIVATE_KEY; must equal the contract's
+//     `operator` address) ---
+
+function normalizeKey(raw: string): Hex {
+  const k = raw.trim();
+  return (k.startsWith("0x") ? k : `0x${k}`) as Hex;
+}
+
+let operatorAcct: PrivateKeyAccount | null = null;
+
+function operatorAccount(): PrivateKeyAccount {
+  if (operatorAcct) return operatorAcct;
+  const pk = process.env.OPERATOR_PRIVATE_KEY;
+  if (!pk) throw new Error("OPERATOR_PRIVATE_KEY is not set");
+  operatorAcct = privateKeyToAccount(normalizeKey(pk));
+  return operatorAcct;
+}
+
+function operatorWallet() {
+  return createWalletClient({
+    account: operatorAccount(),
+    chain: monadChain,
+    transport: http(RPC_URL),
+  });
+}
+
+/** Operator: open a new round. Reverts "round active" if one is still unresolved. */
+export async function sendStartRound(): Promise<Hex> {
+  const wallet = operatorWallet();
+  return wallet.writeContract({
+    account: wallet.account,
+    chain: monadChain,
+    address: CONTRACT_ADDRESS,
+    abi,
+    functionName: "startRound",
+  });
+}
+
+/** Operator: resolve the active round with a signed basis-point price change. */
+export async function sendResolveRound(priceChangeBps: number): Promise<Hex> {
+  const wallet = operatorWallet();
+  return wallet.writeContract({
+    account: wallet.account,
+    chain: monadChain,
+    address: CONTRACT_ADDRESS,
+    abi,
+    functionName: "resolveRound",
+    args: [BigInt(priceChangeBps)],
   });
 }
