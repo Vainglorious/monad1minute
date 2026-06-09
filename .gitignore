@@ -16,3 +16,6 @@ out
 smartcontract/cache
 smartcontract/out
 smartcontract/broadcast
+
+# brainstorming visual companion
+.superpowers/
