@@ -522,21 +522,20 @@ body {
   padding: 2px 0;
 }
 
-/* pill buckets (chip style: tinted bg, colored border + text) */
+/* square buckets with chip colors (tinted bg, colored border + text) */
 .rail-bucket {
   position: relative;
   flex: 1 1 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border-radius: 999px;
+  gap: 1px;
+  padding: 5px 8px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: transparent;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
+  text-align: left;
+  overflow: visible;
   cursor: pointer;
   transition: border-color 0.12s ease, transform 0.05s ease, opacity 0.15s ease,
     background 0.12s ease;
@@ -586,9 +585,26 @@ body {
   opacity: 1;
 }
 
-.rb-count {
+.rb-key {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.rb-mult {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.rb-band {
   font-size: 9px;
-  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rb-meta {
+  font-size: 8.5px;
   color: var(--muted);
 }
 
