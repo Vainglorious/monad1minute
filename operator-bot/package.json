@@ -8,6 +8,7 @@
     "start": "node --env-file=../.env index.js"
   },
   "dependencies": {
-    "viem": "^2.21.0"
+    "viem": "^2.21.0",
+    "ws": "^8.18.0"
   }
 }
