@@ -1,13 +1,17 @@
 :root {
   /* Polymarket Analytics theme — same tokens as the main analytics app
      (off-black page, slate cards, Inter, flat Poly Blue actions). */
-  --bg: #191919; /* off-black */
-  --bg-elev: #1e293b; /* card slate */
-  --border: #29374e; /* subtle border */
+  --bg: #0d1216; /* c-bg-900 — page */
+  --bg-input: #0a0e17; /* c-bg-page — inputs/controls */
+  --bg-elev: #1e293b; /* c-bg-card — card slate */
+  --border: #29374e; /* c-border-subtle */
   --text: #e8eaed; /* c-text-primary */
   --muted: #7b8ca8; /* c-text-muted */
   --accent: #2e5cff; /* Poly Blue */
   --accent-2: #6e8dff;
+  --btn: #415473; /* c-bg-btn-2nd */
+  --btn-hover: #4d6385;
+  --btn-shadow: #29374e; /* hard 3px bottom shadow */
   --up: #53b97c; /* data-good */
   --down: #e55a47; /* data-bad */
   --danger: #e55a47;
@@ -97,12 +101,12 @@ body {
 
 .input {
   width: 100%;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
+  background: var(--bg-input);
+  border: 1px solid var(--bg-elev);
   color: var(--text);
   font-size: 18px;
   padding: 16px;
-  border-radius: 14px;
+  border-radius: 10px;
   outline: none;
   transition: border-color 0.15s ease;
 }
@@ -113,24 +117,26 @@ body {
 
 .btn {
   width: 100%;
-  border: none;
+  border: 1px solid var(--btn);
   border-radius: 10px;
-  padding: 16px;
+  padding: 14px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
-  /* flat Poly Blue — no gradients, same as the analytics app */
-  background: var(--accent);
+  /* polymarket-analytics button: slate + hard 3px bottom shadow */
+  background: var(--btn);
+  box-shadow: 0px 3px 0px var(--btn-shadow);
   cursor: pointer;
   transition: transform 0.05s ease, opacity 0.15s ease, background 0.15s ease;
 }
 
 .btn:not(:disabled):hover {
-  background: #3f6aff;
+  background: var(--btn-hover);
 }
 
 .btn:active {
-  transform: scale(0.99);
+  transform: translateY(2px);
+  box-shadow: 0px 1px 0px var(--btn-shadow);
 }
 
 .btn:disabled {
