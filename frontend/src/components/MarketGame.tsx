@@ -212,7 +212,10 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   const won =
     phase === "resolved" && round && myBet?.placed && myBet.bucket === round.winner;
   const canClaim = won && myBet && !myBet.claimed;
-  const bettingOpen = phase === "open" && !alreadyBet;
+  // Signing + mining takes ~3-6s; the server also rejects inside a 3s margin.
+  // Stop offering bets that can't land instead of letting them fail late.
+  const tooLate = phase === "open" && secondsLeft <= 6;
+  const bettingOpen = phase === "open" && !alreadyBet && !tooLate;
   const frozen = phase === "locked" || phase === "resolved";
   // After a bet (or once resolved), dim everything that isn't the player's pick / winner.
   const focused = alreadyBet || phase === "resolved";
@@ -244,7 +247,7 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
         </span>
         <span className="rb-band">{SHORT_BAND[bucket.id]}</span>
         <span className="rb-meta">{count} bet{count === 1 ? "" : "s"}</span>
-        {mine && <span className="rb-tag">YOU</span>}
+        {mine && <span className="rb-tag">{busy ? "…" : "YOU"}</span>}
         {winner && <span className="rb-tag win">WIN</span>}
       </button>
     );
@@ -302,6 +305,9 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
         <div className="bet-status muted">
           You bet {BUCKETS[myBet!.bucket].key}. Locks in {secondsLeft}s — good luck!
         </div>
+      )}
+      {tooLate && !alreadyBet && (
+        <div className="bet-status muted">Too late this round — next one starts soon.</div>
       )}
       {phase === "locked" && (
         <div className="bet-status muted">Locked — waiting for the result…</div>

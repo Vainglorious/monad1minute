@@ -43,17 +43,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active round." }, { status: 409 });
     }
     const now = Math.floor(Date.now() / 1000);
-    const [round, myBet] = await Promise.all([
+    const [round, myBet, balanceWei] = await Promise.all([
       getRound(roundId),
       getUserBet(roundId, user.address as Address),
+      publicClient.getBalance({ address: user.address as Address }),
     ]);
-    if (round.resolved || now >= round.lockTime) {
+    // 3s margin: a tx signed this close to lockTime mines after the window
+    // closes and reverts — fail fast instead of burning gas on a doomed bet.
+    if (round.resolved || now >= round.lockTime - 3) {
       return NextResponse.json({ error: "Betting is closed for this round." }, { status: 409 });
     }
     if (myBet.placed) {
       return NextResponse.json({ error: "You already bet this round." }, { status: 409 });
     }
-    const balanceWei = await publicClient.getBalance({ address: user.address as Address });
     // Need the stake plus a little for gas.
     if (balanceWei < stake + parseEther("0.01")) {
       return NextResponse.json(
@@ -74,7 +76,11 @@ export async function POST(req: NextRequest) {
       bucket,
       stake,
     );
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash as `0x${string}`,
+      pollingInterval: 400, // Monad blocks are sub-second
+      timeout: 20_000,
+    });
     if (receipt.status !== "success") {
       return NextResponse.json({ error: "Bet transaction failed." }, { status: 502 });
     }

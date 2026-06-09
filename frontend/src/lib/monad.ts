@@ -32,6 +32,9 @@ export const monadChain = defineChain({
 export const publicClient = createPublicClient({
   chain: monadChain,
   transport: http(RPC_URL),
+  // Monad blocks are sub-second; viem's default 4s receipt polling makes every
+  // tx (bets especially) feel slow. Poll fast so receipts land in ~0.5-1s.
+  pollingInterval: 500,
 });
 
 /** Read native MON balance for an address. Returns a decimal string (e.g. "0.0"). */
