@@ -179,6 +179,8 @@ export const LiveChartV2 = forwardRef<LiveChartV2Handle, LiveChartV2Props>(
     const easeStartMsRef = useRef<number | null>(null);
     const lastPushedTimeRef = useRef<number>(0);
     const frozenRef = useRef(frozen);
+    const targetPriceRef = useRef<number | null>(targetPrice ?? null);
+    const priceLineRef = useRef<ReturnType<ISeriesApi<"Area">["createPriceLine"]> | null>(null);
 
     const computeCurrentValue = useCallback((): number | null => {
       const prev = prevValueRef.current;
@@ -194,12 +196,27 @@ export const LiveChartV2 = forwardRef<LiveChartV2Handle, LiveChartV2Props>(
 
     useEffect(() => {
       frozenRef.current = frozen;
-      if (!frozen) return;
+      const chart = chartRef.current;
+      if (!chart) return;
+      const ts = chart.timeScale();
+      if (!frozen) {
+        // Resume the live view: undo the frozen zoom and follow the right edge
+        // again. Without this, new ticks append off-screen after a round and the
+        // chart looks stuck until a manual refresh.
+        try {
+          ts.resetTimeScale();
+          const cw = containerRef.current?.clientWidth ?? 0;
+          if (cw > 0) ts.applyOptions({ barSpacing: cw / VISIBLE_BARS });
+          ts.scrollToRealTime();
+        } catch {
+          /* chart may have unmounted */
+        }
+        return;
+      }
       try {
-        chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
-        const ts = chartRef.current?.timeScale();
-        const fullRange = ts?.getVisibleLogicalRange();
-        if (ts && fullRange) {
+        chart.applyOptions({ handleScroll: false, handleScale: false });
+        const fullRange = ts.getVisibleLogicalRange();
+        if (fullRange) {
           const lastBarIdx = fullRange.to - RIGHT_OFFSET_BARS;
           const totalBars = lastBarIdx - fullRange.from;
           if (totalBars > 0) {
@@ -312,16 +329,8 @@ export const LiveChartV2 = forwardRef<LiveChartV2Handle, LiveChartV2Props>(
         }
       }
 
-      if (targetPrice != null && Number.isFinite(targetPrice)) {
-        series.createPriceLine({
-          price: targetPrice,
-          color: "#9CA3AF",
-          lineWidth: 1,
-          lineStyle: LineStyle.Dotted,
-          axisLabelVisible: true,
-          title: targetLabel || "Target",
-        });
-      }
+      // The target/BASE line is managed in a separate effect (below) so it can
+      // change between rounds without rebuilding the whole chart.
 
       chartRef.current = chart;
       seriesRef.current = series;
@@ -398,12 +407,12 @@ export const LiveChartV2 = forwardRef<LiveChartV2Handle, LiveChartV2Props>(
             }
             strikeEdgeProbeCounter += 1;
             if (
-              targetPrice != null &&
-              Number.isFinite(targetPrice) &&
+              targetPriceRef.current != null &&
+              Number.isFinite(targetPriceRef.current) &&
               strikeEdgeProbeCounter % STRIKE_EDGE_PROBE_EVERY === 0
             ) {
               try {
-                const y = s.priceToCoordinate(targetPrice);
+                const y = s.priceToCoordinate(targetPriceRef.current);
                 const chartHeight = containerRef.current?.clientHeight ?? height;
                 let next: "above" | "below" | null = null;
                 if (typeof y === "number") {
@@ -435,7 +444,38 @@ export const LiveChartV2 = forwardRef<LiveChartV2Handle, LiveChartV2Props>(
         targetValueRef.current = null;
         easeStartMsRef.current = null;
       };
-    }, [height, lineColor, areaTopColor, areaBottomColor, targetPrice, targetLabel, computeCurrentValue]);
+    }, [height, lineColor, areaTopColor, areaBottomColor, computeCurrentValue]);
+
+    // Manage the BASE/target price line imperatively. Changing it between rounds
+    // updates one price line instead of tearing down and rebuilding the chart
+    // (which snapped the view back to stale seed data and looked frozen).
+    useEffect(() => {
+      targetPriceRef.current = targetPrice ?? null;
+      const series = seriesRef.current;
+      if (!series) return;
+      if (priceLineRef.current) {
+        try {
+          series.removePriceLine(priceLineRef.current);
+        } catch {
+          /* ignore */
+        }
+        priceLineRef.current = null;
+      }
+      if (targetPrice != null && Number.isFinite(targetPrice)) {
+        try {
+          priceLineRef.current = series.createPriceLine({
+            price: targetPrice,
+            color: "#9CA3AF",
+            lineWidth: 1,
+            lineStyle: LineStyle.Dotted,
+            axisLabelVisible: true,
+            title: targetLabel || "Target",
+          });
+        } catch {
+          /* series may be gone */
+        }
+      }
+    }, [targetPrice, targetLabel]);
 
     const lastSeedFirstRef = useRef<number | null>(null);
     const lastSeedLastRef = useRef<number | null>(null);

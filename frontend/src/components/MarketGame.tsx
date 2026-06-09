@@ -76,6 +76,9 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlightRef = useRef(false);
+  // Optimistically-placed bet, kept until the chain read catches up so a
+  // background poll doesn't momentarily clear the "YOUR BET" highlight.
+  const pendingBetRef = useRef<{ bucket: number; roundId: string } | null>(null);
 
   const chartRef = useRef<LiveChartV2Handle | null>(null);
   const handleLiveTick = useCallback((timeSec: number, value: number) => {
@@ -92,6 +95,16 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
       const res = await fetch("/api/round", { cache: "no-store" });
       if (!res.ok) return;
       const json: RoundResp = await res.json();
+      // Keep the optimistic bet visible until the chain read reflects it (or the
+      // round advances), so polling never flickers the highlight off.
+      const pending = pendingBetRef.current;
+      if (pending) {
+        if (json.round?.roundId !== pending.roundId || json.myBet?.placed) {
+          pendingBetRef.current = null;
+        } else {
+          json.myBet = { bucket: pending.bucket, placed: true, claimed: false };
+        }
+      }
       setData(json);
       setFetchedAtMs(Date.now());
     } catch {
@@ -119,6 +132,13 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
     if (busy) return;
     setError("");
     setBusy(true);
+    // Optimistic: reflect the bet on the FE immediately (the tx + confirmation
+    // can take a few seconds). Reverted below if the request fails.
+    const rid = data?.round?.roundId;
+    if (rid) pendingBetRef.current = { bucket, roundId: rid };
+    setData((prev) =>
+      prev ? { ...prev, myBet: { bucket, placed: true, claimed: false } } : prev,
+    );
     try {
       const res = await fetch("/api/bet", {
         method: "POST",
@@ -128,6 +148,8 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Bet failed.");
+        pendingBetRef.current = null;
+        setData((prev) => (prev ? { ...prev, myBet: null } : prev)); // revert
       } else {
         onToast(`Bet placed on ${BUCKETS[bucket].key} 🎯`);
         onBalanceChange?.();
@@ -135,6 +157,8 @@ export default function MarketGame({ asset = "btc", onToast, onBalanceChange }: 
       }
     } catch {
       setError("Network error.");
+      pendingBetRef.current = null;
+      setData((prev) => (prev ? { ...prev, myBet: null } : prev)); // revert
     } finally {
       setBusy(false);
     }
