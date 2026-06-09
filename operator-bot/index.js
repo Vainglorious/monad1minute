@@ -131,9 +131,12 @@ async function runForever() {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      // self-heal: if a prior round was left open (e.g. a failed/raced resolve), settle it first
-      // so a single failed resolveRound can't wedge the operator on "round active" forever.
+      // 0) self-heal: never call startRound while a round is still active.
+      //    If a previous cycle failed mid-way (e.g. resolveRound hit an RPC
+      //    error), the round is left unresolved — resolve it first, otherwise
+      //    startRound reverts "round active" and the loop spins forever.
       await resolveOpenRoundIfAny()
+
       // 1) snapshot open price, open the round
       const open = await feed.getPrice()
       await send('startRound')
