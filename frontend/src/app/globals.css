@@ -294,3 +294,339 @@ body {
     transform: translate(-50%, 0);
   }
 }
+
+/* --- top bar --- */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bal-pill {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.bal-pill .unit {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.handle {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* --- betting card --- */
+.bet-card {
+  padding: 18px;
+}
+
+.bet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bet-sub {
+  margin: 4px 0 14px;
+  font-size: 13px;
+}
+
+.phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.phase.open {
+  color: var(--up);
+  border-color: rgba(42, 209, 127, 0.4);
+}
+
+.phase.locked {
+  color: var(--accent-2);
+}
+
+.phase.resolved {
+  color: var(--muted);
+}
+
+.phase-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--up);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.phase-bar {
+  display: inline-block;
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.phase-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--up);
+  transition: width 1s linear;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.bucket-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bucket {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, transform 0.05s ease, background 0.12s ease;
+}
+
+.bucket:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.bucket:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+.bucket:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bucket.extreme {
+  background: linear-gradient(180deg, rgba(131, 110, 249, 0.1), transparent);
+}
+
+.bucket.mine {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+  opacity: 1;
+}
+
+.bucket.winner {
+  border-color: var(--up);
+  box-shadow: 0 0 0 1px var(--up) inset;
+  opacity: 1;
+}
+
+.bucket-key {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.bucket-label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.bucket-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.bucket-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--accent-2);
+}
+
+.bucket-tag.win {
+  color: var(--up);
+}
+
+.bet-status {
+  margin-top: 14px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.win-text {
+  color: var(--up);
+  font-weight: 700;
+}
+
+.next-round {
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.bet-card .btn {
+  margin-top: 14px;
+}
+
+/* --- history --- */
+.hist {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hist-row {
+  display: grid;
+  grid-template-columns: 56px 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.hist-round {
+  color: var(--muted);
+}
+
+.hist-bucket {
+  font-weight: 800;
+}
+
+.hist-amount {
+  color: var(--muted);
+}
+
+.hist-outcome {
+  text-align: right;
+  font-weight: 700;
+}
+
+.hist-outcome.won {
+  color: var(--up);
+}
+
+.hist-outcome.lost {
+  color: var(--down);
+}
+
+.hist-outcome.pending {
+  color: var(--muted);
+}
+
+/* --- receive --- */
+.receive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+/* --- live price ticker --- */
+.ticker {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: calc(9px + env(safe-area-inset-top)) 16px 9px;
+  background: rgba(11, 11, 18, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.ticker-asset {
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ticker-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: flash 0.5s ease;
+}
+
+.ticker-price.up {
+  color: var(--up);
+}
+
+.ticker-price.down {
+  color: var(--down);
+}
+
+.ticker-arrow {
+  font-size: 10px;
+}
+
+.ticker-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.ticker-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--up);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes flash {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}

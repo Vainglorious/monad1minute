@@ -14,4 +14,21 @@ model User {
   privyWalletId String   @unique
   address       String   @unique
   createdAt     DateTime @default(now())
+  bets          Bet[]
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  userId    String
+  roundId   String // uint256 as decimal string
+  bucket    Int // 0..5
+  amount    String // stake in wei, as string
+  txHash    String
+  claimed   Boolean  @default(false)
+  claimTx   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, roundId])
+  @@index([userId])
 }

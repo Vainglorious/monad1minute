@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import Betting from "@/components/Betting";
+import History from "@/components/History";
 
 export interface DashboardUser {
   username: string;
@@ -12,15 +14,19 @@ export interface DashboardUser {
 interface Props {
   user: DashboardUser;
   onLogout: () => void;
+  onToast: (msg: string) => void;
+  onRefresh: () => void;
 }
 
 function short(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
-export default function Dashboard({ user, onLogout }: Props) {
+export default function Dashboard({ user, onLogout, onToast, onRefresh }: Props) {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string>("");
+  const [showReceive, setShowReceive] = useState(false);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     QRCode.toDataURL(user.address, { margin: 1, width: 180 })
@@ -38,55 +44,59 @@ export default function Dashboard({ user, onLogout }: Props) {
     }
   }
 
-  const balanceDisplay =
-    user.balance === null ? "—" : Number(user.balance).toFixed(4);
+  const balanceDisplay = user.balance === null ? "—" : Number(user.balance).toFixed(3);
+
+  const afterAction = () => {
+    setVersion((v) => v + 1);
+    onRefresh();
+  };
 
   return (
     <div className="screen">
-      <div className="brand">
-        <span className="brand-dot" />
-        1 Minute
+      <div className="bar">
+        <div className="brand">
+          <span className="brand-dot" />
+          1 Minute
+        </div>
+        <div className="bar-right">
+          <span className="bal-pill">
+            {balanceDisplay} <span className="unit">MON</span>
+          </span>
+          <span className="handle">@{user.username}</span>
+        </div>
       </div>
 
-      <div className="center-fill stack">
-        <div>
-          <div className="label-xs">Welcome</div>
-          <h1 className="hero-title" style={{ fontSize: 28, margin: "4px 0 0" }}>
-            @{user.username}
-          </h1>
-        </div>
+      <div className="stack" style={{ flex: 1 }}>
+        <Betting onToast={onToast} onBalanceChange={afterAction} />
+
+        <History refreshKey={version} />
 
         <div className="card">
-          <div className="label-xs">Balance · Monad</div>
-          <div className="balance">
-            {balanceDisplay}
-            <span className="unit">MON</span>
-          </div>
-          {user.balance === null && (
-            <div className="muted">Balance unavailable — pull to refresh.</div>
-          )}
-
-          <div style={{ marginTop: 18 }}>
-            <div className="label-xs">Your wallet address</div>
-            <div className="addr-row">
+          <div className="receive-head" onClick={() => setShowReceive((s) => !s)}>
+            <div>
+              <div className="label-xs">Your wallet</div>
               <span className="addr">{short(user.address)}</span>
-              <button className="copy-btn" onClick={copy}>
+            </div>
+            <div className="addr-row">
+              <button
+                className="copy-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copy();
+                }}
+              >
                 {copied ? "Copied!" : "Copy"}
               </button>
+              <button className="copy-btn">{showReceive ? "Hide" : "Receive"}</button>
             </div>
           </div>
-
-          {qr && (
+          {showReceive && qr && (
             <div className="qr-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qr} alt="Wallet address QR" width={180} height={180} />
             </div>
           )}
         </div>
-
-        <p className="muted" style={{ textAlign: "center" }}>
-          Your wallet is funded and ready. 1-minute rounds coming soon.
-        </p>
       </div>
 
       <button className="btn btn-ghost" onClick={onLogout}>
