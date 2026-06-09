@@ -22,7 +22,7 @@ cd "$(dirname "$0")"
 export PATH="$HOME/.foundry/bin:$PATH"
 
 set -a; source ../.env 2>/dev/null || true; set +a
-RPC="${MONAD_RPC:-https://rpc.monad.xyz}"
+RPC="${ALCHEMY_RPC_URL:-${MONAD_RPC:-https://rpc.monad.xyz}}"
 ADDR="${PRICEBETGAME_ADDRESS:?set PRICEBETGAME_ADDRESS in ../.env}"
 WALLETS_FILE="${TEST_WALLETS_FILE:-./.testwallets}"
 DURATION="${1:-360}"

@@ -1,8 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/operator/tick",
-      "schedule": "* * * * *"
-    }
-  ]
+  "$comment": "No Vercel cron — the game operator (startRound/resolveRound every 30s) runs from the local operator-bot, not from Vercel. The /api/operator/tick route stays as a manual/secret-gated trigger but is no longer scheduled."
 }

@@ -21,7 +21,7 @@ import { PriceFeed } from './pricefeed.js'
 // Config
 // ---------------------------------------------------------------------------
 
-const RPC = process.env.MONAD_RPC || 'https://rpc.monad.xyz'
+const RPC = process.env.ALCHEMY_RPC_URL || process.env.MONAD_RPC || 'https://rpc.monad.xyz'
 const CONTRACT = process.env.PRICEBETGAME_ADDRESS
 const PK = process.env.OPERATOR_PRIVATE_KEY
 

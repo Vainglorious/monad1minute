@@ -1,9 +1,13 @@
 import { createPublicClient, http, defineChain, formatEther } from "viem";
 
 // Network is env-driven so testnet/mainnet is a config switch.
-// Defaults target Monad mainnet.
+// Reads prefer Alchemy (reliable infra for many concurrent users); fall back to
+// the public RPC. The game operator runs separately (local operator-bot).
 export const RPC_URL =
-  process.env.MONAD_RPC ?? process.env.MONAD_RPC_URL ?? "https://rpc.monad.xyz";
+  process.env.ALCHEMY_RPC_URL ??
+  process.env.MONAD_RPC ??
+  process.env.MONAD_RPC_URL ??
+  "https://rpc.monad.xyz";
 const CHAIN_ID = Number(process.env.MONAD_CHAIN_ID ?? "143");
 
 export const monadChain = defineChain({
