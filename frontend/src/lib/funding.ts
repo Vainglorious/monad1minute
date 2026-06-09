@@ -7,6 +7,39 @@ export function signupFundingAmount(): string {
   return process.env.SIGNUP_FUNDING_MON ?? "0.1";
 }
 
+/**
+ * Error thrown when funding does not complete. `broadcast` distinguishes the two
+ * cases the caller must handle differently:
+ *  - broadcast=false: the transfer never left the deployer (pre-broadcast failure)
+ *    → safe to roll back the signup.
+ *  - broadcast=true: the transfer WAS broadcast (funds may already have moved)
+ *    → must NOT roll back; the account is funded / funds are in flight.
+ */
+export class FundingError extends Error {
+  readonly broadcast: boolean;
+  readonly hash?: Hex;
+  constructor(message: string, opts: { broadcast: boolean; hash?: Hex }) {
+    super(message);
+    this.name = "FundingError";
+    this.broadcast = opts.broadcast;
+    this.hash = opts.hash;
+  }
+}
+
+/** Redact the RPC URL/host from any string so embedded credentials never leak to logs. */
+export function scrubError(input: unknown): string {
+  let s = input instanceof Error ? `${input.name}: ${input.message ?? ""}` : String(input);
+  if (RPC_URL) {
+    s = s.split(RPC_URL).join("<rpc>");
+    try {
+      s = s.split(new URL(RPC_URL).host).join("<rpc-host>");
+    } catch {
+      /* RPC_URL not a parseable URL — the split above still ran */
+    }
+  }
+  return s.slice(0, 300);
+}
+
 function normalizeKey(raw: string): Hex {
   const k = raw.trim();
   return (k.startsWith("0x") ? k : `0x${k}`) as Hex;
@@ -31,30 +64,45 @@ function deployerAccount(): PrivateKeyAccount {
 }
 
 /**
- * Send the signup funding amount of native MON from the deployer to `to`,
- * waiting for the transaction to confirm. Throws if the transfer cannot be
- * sent or reverts — the caller treats that as a failed signup.
+ * Send the signup funding amount of native MON from the deployer to `to`.
+ * Throws a {@link FundingError}; inspect `.broadcast` to decide whether a
+ * rollback is safe.
  */
 export async function fundNewWallet(to: string): Promise<{ hash: Hex; amount: string }> {
   const acct = deployerAccount();
   const amount = signupFundingAmount();
-
   const client = createWalletClient({
     account: acct,
     chain: monadChain,
     transport: http(RPC_URL),
   });
 
-  const hash = await client.sendTransaction({
-    account: acct,
-    chain: monadChain,
-    to: to as `0x${string}`,
-    value: parseEther(amount),
-  });
-
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== "success") {
-    throw new Error(`Funding transfer reverted (tx ${hash})`);
+  // Phase 1: broadcast. A failure here means nothing left the deployer.
+  let hash: Hex;
+  try {
+    hash = await client.sendTransaction({
+      account: acct,
+      chain: monadChain,
+      to: to as `0x${string}`,
+      value: parseEther(amount),
+    });
+  } catch (err) {
+    throw new FundingError(`send failed: ${scrubError(err)}`, { broadcast: false });
   }
+
+  // Phase 2: confirm. The tx is already broadcast — never roll back from here.
+  try {
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== "success") {
+      throw new FundingError("transfer reverted", { broadcast: true, hash });
+    }
+  } catch (err) {
+    if (err instanceof FundingError) throw err;
+    throw new FundingError(`confirmation unverified: ${scrubError(err)}`, {
+      broadcast: true,
+      hash,
+    });
+  }
+
   return { hash, amount };
 }

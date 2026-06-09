@@ -3,7 +3,7 @@ import { validateUsername } from "@/lib/username";
 import { createServerWallet } from "@/lib/privy";
 import { prisma } from "@/lib/db";
 import { signSession, SESSION_COOKIE } from "@/lib/session";
-import { fundNewWallet } from "@/lib/funding";
+import { fundNewWallet, FundingError, signupFundingAmount } from "@/lib/funding";
 
 export const runtime = "nodejs";
 
@@ -64,12 +64,30 @@ export async function POST(req: NextRequest) {
     const funded = await fundNewWallet(user.address);
     fundedAmount = funded.amount;
   } catch (err) {
-    console.error("Signup funding failed:", err);
-    await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
-    return NextResponse.json(
-      { error: "Could not fund your wallet. Please try again." },
-      { status: 502 },
-    );
+    // If the transfer was already broadcast, funds may have left the deployer —
+    // keep the account (funds in flight); the dashboard balance will reflect it.
+    if (err instanceof FundingError && err.broadcast) {
+      console.warn(
+        `Signup funding broadcast but unconfirmed for user ${user.id} (tx ${err.hash}): ${err.message}`,
+      );
+      fundedAmount = signupFundingAmount();
+    } else {
+      // Pre-broadcast failure: nothing left the deployer, safe to roll back.
+      console.error(
+        `Signup funding failed before broadcast: ${err instanceof Error ? err.name : "unknown"}`,
+      );
+      const rolledBack = await prisma.user
+        .delete({ where: { id: user.id } })
+        .then(() => true)
+        .catch(() => false);
+      if (!rolledBack) {
+        console.error(`Rollback failed — orphaned user row ${user.id}`);
+      }
+      return NextResponse.json(
+        { error: "Could not fund your wallet. Please try again." },
+        { status: 502 },
+      );
+    }
   }
 
   const token = await signSession({ userId: user.id, username: user.username });
