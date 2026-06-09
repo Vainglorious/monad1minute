@@ -128,11 +128,12 @@ async function runForever() {
   console.log('  stake    :', formatEther(betAmount), 'MON/bet')
   console.log('  window   :', Number(duration), 's (cycle ≈', Number(duration) + LOCK_BUFFER_S, 's )\n')
 
-  await resolveOpenRoundIfAny()
-
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
+      // self-heal: if a prior round was left open (e.g. a failed/raced resolve), settle it first
+      // so a single failed resolveRound can't wedge the operator on "round active" forever.
+      await resolveOpenRoundIfAny()
       // 1) snapshot open price, open the round
       const open = await feed.getPrice()
       await send('startRound')

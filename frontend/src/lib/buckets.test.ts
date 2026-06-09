@@ -43,11 +43,17 @@ describe("derivePhase", () => {
 
 describe("potentialPayoutWei", () => {
   const stake = 200000000000000000n; // 0.2 MON
-  it("extreme uses 5x", () => {
-    expect(potentialPayoutWei(0, stake, 5n, 2n)).toBe(stake * 5n);
-    expect(potentialPayoutWei(5, stake, 5n, 2n)).toBe(stake * 5n);
+  // per-bucket multipliers scaled by 100: A:20x B:10x C:2.8x D:2.8x E:10x F:20x
+  const mult = [2000n, 1000n, 280n, 280n, 1000n, 2000n];
+  it("extremes (A,F) use 20x", () => {
+    expect(potentialPayoutWei(0, stake, mult)).toBe((stake * 2000n) / 100n);
+    expect(potentialPayoutWei(5, stake, mult)).toBe((stake * 2000n) / 100n);
   });
-  it("middle uses 2x", () => {
-    expect(potentialPayoutWei(2, stake, 5n, 2n)).toBe(stake * 2n);
+  it("mid (B,E) use 10x", () => {
+    expect(potentialPayoutWei(1, stake, mult)).toBe((stake * 1000n) / 100n);
+    expect(potentialPayoutWei(4, stake, mult)).toBe((stake * 1000n) / 100n);
+  });
+  it("near-zero (C,D) use 2.8x", () => {
+    expect(potentialPayoutWei(2, stake, mult)).toBe((stake * 280n) / 100n);
   });
 });

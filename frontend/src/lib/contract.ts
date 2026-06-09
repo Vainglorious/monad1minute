@@ -33,8 +33,7 @@ export interface RoundState {
 
 export interface GameConfig {
   betAmount: bigint;
-  extremeMultiplier: bigint;
-  middleMultiplier: bigint;
+  bucketMultipliers: bigint[]; // length 6, scaled by 100 (280 = 2.8x, 2000 = 20x)
   bettingDuration: number;
 }
 
@@ -65,16 +64,14 @@ export async function getRound(roundId: bigint): Promise<RoundState> {
 }
 
 export async function getConfig(): Promise<GameConfig> {
-  const [betAmount, extremeMultiplier, middleMultiplier, bettingDuration] = await Promise.all([
+  const [betAmount, bucketMultipliers, bettingDuration] = await Promise.all([
     read<bigint>("betAmount"),
-    read<bigint>("extremeMultiplier"),
-    read<bigint>("middleMultiplier"),
+    read<readonly bigint[]>("getBucketMultipliers"),
     read<bigint>("bettingDuration"),
   ]);
   return {
     betAmount,
-    extremeMultiplier,
-    middleMultiplier,
+    bucketMultipliers: bucketMultipliers.map((m) => BigInt(m)),
     bettingDuration: Number(bettingDuration),
   };
 }

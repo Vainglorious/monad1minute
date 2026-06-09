@@ -14,8 +14,7 @@ interface RoundResp {
   now: number;
   config: {
     betAmount: string;
-    extremeMultiplier: string;
-    middleMultiplier: string;
+    bucketMultipliers: string[];
     bettingDuration: number;
   };
   round: {
@@ -87,8 +86,7 @@ export default function Betting({ onToast, onBalanceChange }: Props) {
 
   const { config, round, bucketCounts, myBet } = data;
   const stake = BigInt(config.betAmount);
-  const extreme = BigInt(config.extremeMultiplier);
-  const middle = BigInt(config.middleMultiplier);
+  const bucketMultipliers = config.bucketMultipliers.map((m) => BigInt(m));
 
   // server-anchored current time (seconds), advanced by local elapsed
   const elapsed = fetchedAtMs ? (Math.max(nowMs, fetchedAtMs) - fetchedAtMs) / 1000 : 0;
@@ -163,13 +161,13 @@ export default function Betting({ onToast, onBalanceChange }: Props) {
       </div>
 
       <div className="bet-sub muted">
-        Stake {fmt(stake)} MON · BTC/USD move over {config.bettingDuration}s · win 2× or 5×
+        Stake {fmt(stake)} MON · BTC/USD move over {config.bettingDuration}s · win 2.8×–20×
       </div>
 
       <div className="bucket-grid">
         {BUCKETS.map((b) => {
           const count = bucketCounts[b.id] ?? 0;
-          const payout = potentialPayoutWei(b.id, stake, extreme, middle);
+          const payout = potentialPayoutWei(b.id, stake, bucketMultipliers);
           const mine = myBet?.placed && myBet.bucket === b.id;
           const winner = phase === "resolved" && round?.winner === b.id;
           const disabled = !bettingOpen || busy;
