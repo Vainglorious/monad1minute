@@ -31,7 +31,6 @@ export async function GET(req: NextRequest) {
       JOIN "User" u ON u."id" = b."userId"
       GROUP BY u."id", u."username"
       ORDER BY "wins" DESC, SUM(b."amount"::numeric) DESC, "bets" DESC
-      LIMIT 10
     `;
     return NextResponse.json({ leaders: rows, me: user.username });
   } catch (err) {

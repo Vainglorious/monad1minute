@@ -719,6 +719,15 @@ body {
   gap: 8px;
 }
 
+.lb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .lb-row {
   display: grid;
   grid-template-columns: 32px 1fr 44px 44px 64px;

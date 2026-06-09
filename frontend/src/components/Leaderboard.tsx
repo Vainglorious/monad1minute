@@ -52,18 +52,20 @@ export default function Leaderboard({ refreshKey }: Props) {
           <span className="lb-num">Wins</span>
           <span className="lb-num">Wagered</span>
         </div>
-        {leaders.map((l, i) => (
-          <div className={`lb-row${l.username === me ? " me" : ""}`} key={l.username}>
-            <span className="lb-rank">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
-            <span className="lb-name">
-              @{l.username}
-              {l.username === me && <span className="lb-you">YOU</span>}
-            </span>
-            <span className="lb-num">{l.bets}</span>
-            <span className="lb-num win">{l.wins}</span>
-            <span className="lb-num">{fmt(l.wagered)}</span>
-          </div>
-        ))}
+        <div className="lb-body">
+          {leaders.map((l, i) => (
+            <div className={`lb-row${l.username === me ? " me" : ""}`} key={l.username}>
+              <span className="lb-rank">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+              <span className="lb-name">
+                @{l.username}
+                {l.username === me && <span className="lb-you">YOU</span>}
+              </span>
+              <span className="lb-num">{l.bets}</span>
+              <span className="lb-num win">{l.wins}</span>
+              <span className="lb-num">{fmt(l.wagered)}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
