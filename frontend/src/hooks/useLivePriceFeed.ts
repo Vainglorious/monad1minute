@@ -54,15 +54,22 @@ export function useLivePriceFeed(
     };
   }, [assetUpper]);
 
-  // ── live ticks via Coinbase `ticker` WS ───────────────────────────
+  // ── live ticks via Coinbase `ticker` WS, with REST fallback ───────
+  // Coinbase caps unauthenticated ticker subscriptions per IP and answers with
+  // an in-band {type:"error"} frame (socket stays open!). We must close those
+  // zombies ourselves, back off on reconnect, and keep the price moving via
+  // REST polling whenever the socket is silent.
   useEffect(() => {
     let ws: WebSocket | null = null;
     let cancelled = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let lastStateMs = 0;
+    let lastTickMs = 0;
+    let attempts = 0;
 
     const handleTrade = (val: number, tMs: number) => {
       if (!Number.isFinite(val) || !Number.isFinite(tMs)) return;
+      lastTickMs = Date.now();
       // Fast path: straight into the chart, no React re-render.
       onLiveTickRef.current?.(Math.floor(tMs / 1000), val);
       // Slow path: throttle the header price to ~5 Hz, with up/down direction.
@@ -102,7 +109,16 @@ export function useLivePriceFeed(
           const msg = JSON.parse(ev.data);
           // { type: 'ticker', price: '...', time: '2026-...Z' }
           if (msg.type === "ticker" && msg.price) {
+            attempts = 0; // healthy — reset backoff
             handleTrade(parseFloat(msg.price), msg.time ? Date.parse(msg.time) : Date.now());
+          } else if (msg.type === "error") {
+            // e.g. "subscription limit reached" — close the zombie so it frees
+            // the per-IP slot; onclose schedules a backed-off retry.
+            try {
+              ws?.close();
+            } catch {
+              /* ignore */
+            }
           }
         } catch {
           /* skip malformed frame */
@@ -110,7 +126,9 @@ export function useLivePriceFeed(
       };
       ws.onclose = () => {
         if (cancelled) return;
-        reconnectTimer = setTimeout(connect, 1500);
+        attempts += 1;
+        const delay = Math.min(30_000, 1500 * 2 ** Math.min(attempts, 4));
+        reconnectTimer = setTimeout(connect, delay);
       };
       ws.onerror = () => {
         /* onclose fires next and reconnects */
@@ -129,6 +147,26 @@ export function useLivePriceFeed(
       }
     };
 
+    // REST fallback: if the socket has been silent for >6s, poll the last 1-min
+    // candle close (server-side route, no CORS/limits) every 4s so the header
+    // price and chart never freeze even when WS subscriptions are capped.
+    const fallbackTimer = setInterval(async () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+      if (Date.now() - lastTickMs < 6000) return;
+      try {
+        const res = await fetch(`/api/crypto-price-history?symbol=${assetUpper}&minutes=2`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const pts: { time: number; value: number }[] = Array.isArray(json?.data) ? json.data : [];
+        const last = pts[pts.length - 1];
+        if (last && Number.isFinite(last.value)) handleTrade(last.value, Date.now());
+      } catch {
+        /* keep trying */
+      }
+    }, 4000);
+
     connect();
     document.addEventListener("visibilitychange", onVisibility);
 
@@ -136,13 +174,14 @@ export function useLivePriceFeed(
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(fallbackTimer);
       try {
         ws?.close();
       } catch {
         /* ignore */
       }
     };
-  }, [product]);
+  }, [product, assetUpper]);
 
   return { history, livePrice, dir };
 }
