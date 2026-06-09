@@ -22,12 +22,15 @@ when the socket is stale/disconnected. Choose the provider with the `PRICE_SOURC
 
 | `PRICE_SOURCE` | Live WS | Notes |
 |---|---|---|
-| `binance` (default) | `stream.binance.com` `@trade` | Matches the FE. **Geo-blocked (HTTP 451) from US servers.** |
-| `binanceus` | `stream.binance.us` `@trade` | Same protocol, works from the US. |
-| `coinbase` | `ws-feed.exchange.coinbase.com` | Real BTC-USD, works from the US. |
+| `binance` (default) | `stream.binance.com` `@trade` | Matches the FE, deep liquidity. **Geo-blocked (HTTP 451) from US servers.** |
+| `binanceus` | `stream.binance.us` `@trade` | Same protocol, works from the US, but **thin BTC liquidity** — on short (≤30s) windows the price often doesn't move, giving `0 bps`. Avoid for short windows. |
+| `coinbase` | `ws-feed.exchange.coinbase.com` | Real BTC-USD, works from the US, **deep liquidity**. Best US-reachable choice for short windows. |
 
-> Pick based on where the **bot runs** (your server), not where the FE runs. If the default
-> `binance` returns 451, use `binanceus` or `coinbase`. Set `ASSET` (default `BTC`) to change the pair.
+> Pick based on where the **bot runs** (your server), not where the FE runs.
+> - Non-US server → `binance` (deep + matches FE).
+> - US server → `coinbase` (deep). Avoid `binanceus` on short windows (thin liquidity → flat `0 bps` rounds).
+>
+> Set `ASSET` (default `BTC`) to change the pair.
 
 ## Config
 
