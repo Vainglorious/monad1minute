@@ -66,8 +66,14 @@ export async function GET(req: NextRequest) {
       balance,
     });
   } catch (err) {
-    console.error("Round read failed:", scrubError(err));
-    return NextResponse.json({ error: "Could not read the current round." }, { status: 502 });
+    const detail = scrubError(err);
+    console.error("Round read failed:", detail);
+    // Surface the scrubbed reason so failures are diagnosable from the client
+    // (no secrets — scrubError redacts keys and truncates).
+    return NextResponse.json(
+      { error: "Could not read the current round.", detail },
+      { status: 502 },
+    );
   }
 }
 
